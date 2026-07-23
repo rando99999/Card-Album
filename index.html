@@ -71,7 +71,8 @@ input,textarea{font-family:inherit;}
 .overlay{position:fixed;inset:0;background:rgba(20,15,10,.55);z-index:50;display:flex;align-items:flex-end;justify-content:center;opacity:0;pointer-events:none;transition:opacity .2s;}
 .overlay.show{opacity:1;pointer-events:auto;}
 @media(min-width:760px){.overlay{align-items:center;}}
-.spread{background:var(--paper-light);width:100%;max-width:820px;max-height:94vh;overflow-y:auto;border-radius:18px 18px 0 0;box-shadow:0 -6px 30px rgba(0,0,0,.4);transform:translateY(30px);transition:transform .25s ease;padding:0 0 24px;}
+.spread{background:var(--paper-light);width:100%;max-width:820px;max-height:94vh;max-height:94dvh;overflow-y:auto;border-radius:18px 18px 0 0;box-shadow:0 -6px 30px rgba(0,0,0,.4);transform:translateY(30px);transition:transform .25s ease;padding:0 0 24px;}
+.close-fab{position:fixed;top:calc(env(safe-area-inset-top,0px) + 14px);right:14px;z-index:100;width:42px;height:42px;border-radius:50%;background:var(--ink);color:var(--paper-light);display:flex;align-items:center;justify-content:center;font-size:19px;box-shadow:0 3px 10px rgba(0,0,0,.45);border:none;}
 @media(min-width:760px){.spread{border-radius:18px;transform:translateY(10px);}}
 .overlay.show .spread{transform:translateY(0);}
 .spread-top{display:flex;justify-content:flex-end;gap:8px;padding:12px 14px 0;position:sticky;top:0;background:var(--paper-light);z-index:2;}
@@ -179,7 +180,7 @@ function showBanner(msg){
 }
 
 function esc(s){ if(s===null||s===undefined) return ''; return String(s).replace(/[&<>"']/g, c=>({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;',"'":'&#39;'}[c])); }
-function initials(name){ return name.split(/[\s&/]+/).filter(Boolean).slice(0,2).map(w=>w[0]).join('').toUpperCase(); }
+function initials(name){ if(!name) return '?'; return name.split(/[\s&/]+/).filter(Boolean).slice(0,2).map(w=>w[0]).join('').toUpperCase(); }
 function slug(tag){ return tag.replace(/\s+/g,'-'); }
 function hashAngle(id){
   let h = 0;
@@ -395,6 +396,7 @@ function render(){
     ${renderCorkboard()}
     <div class="footer-note">${state.cards.length} cards · ${withPhoto} with photos so far</div>
     <div class="overlay ${state.openId ? 'show':''}" id="overlay">
+      ${state.openId ? '<button class="close-fab" data-close="1">✕</button>' : ''}
       <div class="spread">${state.openId ? renderSpread(state.cards.find(c=>c.id===state.openId) || {}) : ''}</div>
     </div>
   `;
@@ -426,8 +428,7 @@ function bindEvents(){
   app.querySelectorAll('[data-open]').forEach(el=>el.addEventListener('click', ()=>{
     state.openId = el.getAttribute('data-open'); state.flipped = false; state.editingStatsFor = null; render();
   }));
-  const closeBtn = app.querySelector('[data-close]');
-  if(closeBtn) closeBtn.addEventListener('click', ()=>{ state.openId=null; state.editingStatsFor=null; render(); });
+  app.querySelectorAll('[data-close]').forEach(el=>el.addEventListener('click', ()=>{ state.openId=null; state.editingStatsFor=null; render(); }));
   const overlay = document.getElementById('overlay');
   if(overlay) overlay.addEventListener('click', (e)=>{ if(e.target===overlay){ state.openId=null; state.editingStatsFor=null; render(); }});
 
