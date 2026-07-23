@@ -1,0 +1,542 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1, maximum-scale=1, viewport-fit=cover">
+<title>Passed Down — A Card Album</title>
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link href="https://fonts.googleapis.com/css2?family=Caveat:wght@500;600;700&family=Fraunces:opsz,wght@9..144,400;9..144,500;9..144,600;9..144,700&family=Source+Serif+4:opsz,wght@8..60,400;8..60,600&family=IBM+Plex+Mono:wght@400;500&display=swap" rel="stylesheet">
+<style>
+:root{
+  --paper:#E4D5B7; --paper-deep:#D3BE92; --paper-light:#F7EFDC;
+  --ink:#2B2420; --ink-soft:#6b6152;
+  --purple:#552583; --gold:#c98f0d; --gold-bright:#e0a91b; --rust:#a8552e; --moss:#5c6b3f;
+  --tape:rgba(226,212,178,0.9); --shadow:rgba(43,36,32,0.28);
+  --font-display:'Fraunces',serif; --font-hand:'Caveat',cursive;
+  --font-body:'Source Serif 4',serif; --font-mono:'IBM Plex Mono',monospace;
+}
+*{box-sizing:border-box;-webkit-tap-highlight-color:transparent;}
+html,body{margin:0;padding:0;height:100%;}
+body{font-family:var(--font-body);color:var(--ink);
+  background:radial-gradient(ellipse at 20% 0%, rgba(255,255,255,0.25), transparent 55%),
+    radial-gradient(ellipse at 90% 90%, rgba(0,0,0,0.06), transparent 50%), var(--paper);
+  min-height:100%;overflow-x:hidden;}
+::selection{background:var(--gold-bright);color:var(--ink);}
+button{font-family:inherit;cursor:pointer;}
+input,textarea{font-family:inherit;}
+:focus-visible{outline:3px solid var(--purple);outline-offset:2px;}
+
+#app{max-width:1080px;margin:0 auto;padding:18px 16px 80px;}
+.header{display:flex;align-items:flex-end;justify-content:space-between;gap:12px;margin-bottom:6px;flex-wrap:wrap;}
+.title-block h1{font-family:var(--font-display);font-weight:700;font-size:clamp(30px,6vw,44px);margin:0;line-height:1;color:var(--ink);letter-spacing:-0.01em;}
+.title-block .sub{font-family:var(--font-hand);font-size:20px;color:var(--ink-soft);margin-top:2px;}
+.ledger-toggle{display:flex;align-items:center;gap:8px;background:var(--paper-light);border:1px solid var(--paper-deep);border-radius:999px;padding:6px 12px 6px 8px;font-family:var(--font-mono);font-size:12px;color:var(--ink-soft);box-shadow:0 1px 2px var(--shadow);}
+.switch{position:relative;width:34px;height:19px;background:#c9b896;border-radius:999px;transition:background .2s;flex-shrink:0;}
+.switch.on{background:var(--purple);}
+.switch::after{content:'';position:absolute;top:2px;left:2px;width:15px;height:15px;background:#fff;border-radius:50%;transition:left .2s;box-shadow:0 1px 2px rgba(0,0,0,.3);}
+.switch.on::after{left:17px;}
+
+.tabs{display:flex;gap:6px;margin:18px 0 12px;flex-wrap:wrap;}
+.tab{font-family:var(--font-display);font-weight:600;font-size:14px;padding:8px 16px 7px;border-radius:8px 8px 2px 2px;border:1px solid transparent;background:transparent;color:var(--ink-soft);border-bottom:3px solid transparent;}
+.tab.active{background:var(--paper-light);color:var(--ink);border-bottom:3px solid var(--purple);box-shadow:0 1px 3px var(--shadow);}
+.tab .dot{display:inline-block;width:8px;height:8px;border-radius:50%;margin-right:6px;vertical-align:middle;}
+.tab[data-tab="dad"] .dot{background:var(--purple);}
+.tab[data-tab="son"] .dot{background:var(--gold-bright);}
+
+.filters{display:flex;gap:8px;flex-wrap:wrap;align-items:center;margin-bottom:16px;}
+.pill{font-size:12.5px;font-family:var(--font-mono);padding:5px 11px;border-radius:999px;border:1px solid var(--paper-deep);background:var(--paper-light);color:var(--ink-soft);}
+.pill.active{background:var(--ink);color:var(--paper-light);border-color:var(--ink);}
+.search-wrap{position:relative;flex:1;min-width:160px;}
+.search-wrap input{width:100%;padding:7px 12px;border-radius:999px;border:1px solid var(--paper-deep);background:var(--paper-light);font-family:var(--font-mono);font-size:12.5px;color:var(--ink);}
+.search-wrap input::placeholder{color:#9c9080;}
+
+.corkboard{background:radial-gradient(circle at 15% 20%, rgba(0,0,0,0.10) 0, transparent 3%),radial-gradient(circle at 60% 70%, rgba(0,0,0,0.10) 0, transparent 3%),radial-gradient(circle at 85% 35%, rgba(0,0,0,0.10) 0, transparent 3%),radial-gradient(circle at 35% 85%, rgba(0,0,0,0.10) 0, transparent 3%),linear-gradient(135deg,#a9764f,#8f6440 60%,#7d5636);border-radius:16px;padding:22px 16px 30px;box-shadow:inset 0 2px 14px rgba(0,0,0,0.35), 0 4px 16px var(--shadow);}
+.grid{display:grid;grid-template-columns:repeat(auto-fill,minmax(140px,1fr));gap:22px 16px;}
+.pin-card{background:var(--paper-light);padding:8px 8px 14px;border-radius:2px;box-shadow:0 6px 14px rgba(0,0,0,.35);position:relative;transition:transform .15s ease;cursor:pointer;border:1px solid rgba(0,0,0,0.05);}
+.pin-card:hover{transform:translateY(-3px) scale(1.02);}
+.pin-card:active{transform:translateY(0) scale(.99);}
+.pin-card::before{content:'';position:absolute;top:-9px;left:50%;transform:translateX(-50%);width:16px;height:16px;border-radius:50%;background:radial-gradient(circle at 35% 30%,#fff,var(--gold-bright) 45%,var(--gold) 100%);box-shadow:0 2px 3px rgba(0,0,0,.5);}
+.pin-photo{width:100%;aspect-ratio:2.5/3.5;background:linear-gradient(135deg,#efe5cf,#e2d3ae);border:1px solid rgba(0,0,0,.08);display:flex;align-items:center;justify-content:center;overflow:hidden;position:relative;}
+.pin-photo img{width:100%;height:100%;object-fit:cover;display:block;}
+.placeholder-ph{font-family:var(--font-display);font-weight:600;font-size:26px;color:#b9a377;text-align:center;padding:8px;}
+.pin-owner{position:absolute;top:6px;right:6px;width:10px;height:10px;border-radius:50%;box-shadow:0 0 0 2px var(--paper-light);}
+.pin-owner.dad{background:var(--purple);}
+.pin-owner.son{background:var(--gold-bright);}
+.pin-lock{position:absolute;bottom:6px;right:6px;font-size:12px;background:rgba(255,255,255,.85);border-radius:50%;width:18px;height:18px;display:flex;align-items:center;justify-content:center;}
+.pin-caption{font-family:var(--font-hand);font-size:17px;text-align:center;margin-top:8px;line-height:1.15;color:var(--ink);}
+.pin-sub{font-family:var(--font-mono);font-size:9px;text-align:center;color:var(--ink-soft);margin-top:2px;text-transform:uppercase;letter-spacing:.03em;}
+.empty-note{font-family:var(--font-hand);font-size:22px;color:rgba(255,255,255,.85);text-align:center;padding:40px 20px;}
+
+.overlay{position:fixed;inset:0;background:rgba(20,15,10,.55);z-index:50;display:flex;align-items:flex-end;justify-content:center;opacity:0;pointer-events:none;transition:opacity .2s;}
+.overlay.show{opacity:1;pointer-events:auto;}
+@media(min-width:760px){.overlay{align-items:center;}}
+.spread{background:var(--paper-light);width:100%;max-width:820px;max-height:94vh;overflow-y:auto;border-radius:18px 18px 0 0;box-shadow:0 -6px 30px rgba(0,0,0,.4);transform:translateY(30px);transition:transform .25s ease;padding:0 0 24px;}
+@media(min-width:760px){.spread{border-radius:18px;transform:translateY(10px);}}
+.overlay.show .spread{transform:translateY(0);}
+.spread-top{display:flex;justify-content:flex-end;gap:8px;padding:12px 14px 0;position:sticky;top:0;background:var(--paper-light);z-index:2;}
+.icon-btn{background:var(--paper);border:1px solid var(--paper-deep);border-radius:8px;width:34px;height:34px;display:flex;align-items:center;justify-content:center;font-size:15px;color:var(--ink-soft);}
+.spread-body{display:flex;flex-direction:column;gap:0;padding:6px 22px 0;}
+@media(min-width:640px){.spread-body{flex-direction:row;gap:26px;padding:6px 28px 0;}}
+.photo-stage{flex:0 0 auto;width:100%;max-width:280px;margin:8px auto 0;perspective:1200px;}
+@media(min-width:640px){.photo-stage{margin:8px 0 0;}}
+.flip-card{position:relative;width:100%;aspect-ratio:2.5/3.5;cursor:pointer;}
+.flip-inner{position:relative;width:100%;height:100%;transition:transform .55s cubic-bezier(.4,.2,.2,1);transform-style:preserve-3d;}
+.flip-card.flipped .flip-inner{transform:rotateY(180deg);}
+.flip-face{position:absolute;inset:0;backface-visibility:hidden;border-radius:6px;overflow:hidden;background:linear-gradient(135deg,#efe5cf,#e2d3ae);border:6px solid #fff;box-shadow:0 8px 20px rgba(0,0,0,.3);display:flex;align-items:center;justify-content:center;}
+.flip-face img{width:100%;height:100%;object-fit:cover;}
+.flip-face.back{transform:rotateY(180deg);}
+.tape-corner{position:absolute;width:34px;height:16px;background:var(--tape);opacity:.85;box-shadow:0 1px 2px rgba(0,0,0,.15);}
+.tape-corner.tl{top:-8px;left:14px;transform:rotate(-8deg);}
+.tape-corner.tr{top:-8px;right:14px;transform:rotate(7deg);}
+.flip-hint{text-align:center;font-family:var(--font-mono);font-size:10.5px;color:var(--ink-soft);margin-top:10px;letter-spacing:.03em;text-transform:uppercase;}
+.card-info{flex:1;padding:18px 0 8px;min-width:0;}
+.owner-badge{display:inline-flex;align-items:center;gap:5px;font-family:var(--font-mono);font-size:11px;padding:3px 10px;border-radius:999px;margin-bottom:8px;letter-spacing:.02em;}
+.owner-badge.dad{background:rgba(85,37,131,.12);color:var(--purple);}
+.owner-badge.son{background:rgba(224,169,27,.16);color:#8a6510;}
+.card-name{font-family:var(--font-display);font-weight:700;font-size:clamp(22px,4vw,30px);line-height:1.08;margin:0 0 2px;}
+.card-tags{display:flex;gap:6px;flex-wrap:wrap;margin:8px 0 14px;}
+.tag-chip{font-family:var(--font-mono);font-size:10.5px;padding:3px 9px;border-radius:5px;text-transform:uppercase;letter-spacing:.03em;}
+.tag-chip.Legends{background:rgba(85,37,131,.12);color:var(--purple);}
+.tag-chip.Prospects{background:rgba(168,85,46,.14);color:var(--rust);}
+.tag-chip.Rising-Stars{background:rgba(224,169,27,.18);color:#8a6510;}
+.tag-chip.Other{background:rgba(92,107,63,.14);color:var(--moss);}
+.stat-block{border-top:1px solid var(--paper-deep);border-bottom:1px solid var(--paper-deep);padding:10px 0;margin-bottom:16px;}
+.stat-row{display:flex;justify-content:space-between;gap:10px;font-family:var(--font-mono);font-size:12.5px;padding:3px 0;color:var(--ink);}
+.stat-row .k{color:var(--ink-soft);flex-shrink:0;}
+.stat-row .v{text-align:right;}
+.stat-edit-input{border:none;border-bottom:1px dashed var(--paper-deep);background:transparent;font-family:var(--font-mono);font-size:12.5px;color:var(--ink);text-align:right;width:60%;padding:1px 2px;}
+.stat-edit-input:focus{border-bottom:1px dashed var(--purple);}
+.story-label{font-family:var(--font-hand);font-size:19px;color:var(--rust);margin:14px 0 2px;display:flex;align-items:center;gap:8px;}
+.story-label.thesis{color:var(--purple);margin-top:0;}
+.save-indicator{font-family:var(--font-mono);font-size:10px;color:var(--moss);opacity:0;transition:opacity .4s;}
+.save-indicator.show{opacity:1;}
+.canvas-input{width:100%;border:none;background:transparent;resize:none;overflow:hidden;font-family:var(--font-body);font-size:15px;line-height:1.55;color:var(--ink);padding:2px 2px 6px;border-bottom:1px dashed var(--paper-deep);}
+.canvas-input::placeholder{color:var(--ink-soft);font-style:italic;opacity:.75;}
+.canvas-input:focus{border-bottom:1px dashed var(--purple);}
+.story-text{font-family:var(--font-body);font-size:15px;line-height:1.55;color:var(--ink);white-space:pre-wrap;}
+.story-empty{font-family:var(--font-body);font-style:italic;color:var(--ink-soft);font-size:13.5px;}
+.btn{font-family:var(--font-display);font-weight:600;font-size:13px;padding:7px 14px;border-radius:8px;border:none;}
+.btn.primary{background:var(--purple);color:#fff;}
+.btn.ghost{background:transparent;color:var(--ink-soft);border:1px solid var(--paper-deep);}
+.listing-box{margin-top:14px;padding:9px 11px;background:var(--paper);border-radius:8px;font-family:var(--font-mono);font-size:11px;color:var(--ink-soft);line-height:1.5;word-break:break-word;}
+.listing-box a{color:var(--purple);}
+.ledger-box{margin-top:10px;padding:10px 12px;background:var(--paper);border-radius:8px;border:1px dashed var(--paper-deep);}
+.ledger-box .stat-row{font-size:12px;}
+.ledger-box .title{font-family:var(--font-mono);font-size:10px;text-transform:uppercase;letter-spacing:.05em;color:var(--ink-soft);margin-bottom:4px;}
+.footer-note{text-align:center;font-family:var(--font-hand);font-size:16px;color:var(--ink-soft);margin-top:26px;}
+#toastBanner{position:fixed;bottom:18px;left:50%;transform:translateX(-50%);background:#2B2420;color:#F7EFDC;padding:10px 16px;border-radius:8px;font-family:'IBM Plex Mono',monospace;font-size:12.5px;z-index:999;max-width:88%;text-align:center;box-shadow:0 4px 14px rgba(0,0,0,.4);opacity:0;transition:opacity .3s;pointer-events:none;}
+</style>
+</head>
+<body>
+<div id="app"></div>
+
+<script type="application/json" id="seed-data">
+[{"id":"GkChkHjqEpLq5aclFa5Q","owner":"dad","player":"Adou Thiero","year":"2025","set":"Topps Three","cardNumber":null,"variant":"Rookie 3 Patch Auto Bronze /25 Vertical RPA","grade":"Raw","estimatedValue":"$0.00","datePurchased":"Jul 19, 2026","totalInvestment":"$89.00","ebayUrl":"https://www.ebay.com/itm/358816169440","ebaySeller":"highcards-official","notes":"eBay: https://www.ebay.com/itm/358816169440 | seller highcards-official | order 06-14926-17189 | base $89.00 (excl. ship/tax)","tags":["Prospects"],"frontImage":"https://lh3.googleusercontent.com/d/1Lf9T_gIcydb8X5xN3KYl4ek8-16WmGdc=w1000","backImage":"https://lh3.googleusercontent.com/d/130wkDpZM5ujNXhOiIigcFgIEN9EUPtrm=w1000"},{"id":"asvKOdNQucBQRvlv0vto","owner":"dad","player":"Adou Thiero","year":"2025","set":"Bowman Chrome University","cardNumber":"BCA-AT","variant":"Orange Geometric Rookie Auto /25","grade":"Raw","estimatedValue":"$0.00","datePurchased":"Jul 11, 2026","totalInvestment":"$59.95","ebayUrl":"https://www.ebay.com/itm/158067782761","ebaySeller":"sbayvintageandnew","notes":"eBay: https://www.ebay.com/itm/158067782761 | seller sbayvintageandnew | order 01-14900-49305 | base $59.95 (excl. ship/tax)","tags":["Prospects"],"frontImage":"https://lh3.googleusercontent.com/d/1PznXV4fyr7aa0s6XcEtOs-MV8DV3EQuU=w1000","backImage":"https://lh3.googleusercontent.com/d/1FQfHKCzdosXjUipAsxGcEKTVIyFFMt0C=w1000"},{"id":"kx2A3jPMNvgmqKmKYxAI","owner":"dad","player":"Adou Thiero","year":"2025","set":"Bowman Sapphire","cardNumber":null,"variant":"Chrome Auto Black Refractor /10 Rookie","grade":"Raw","estimatedValue":"$0.00","datePurchased":"Jul 11, 2026","totalInvestment":"$131.38","ebayUrl":"https://www.ebay.com/itm/377322661385","ebaySeller":"dcsports87","notes":"eBay: https://www.ebay.com/itm/377322661385 | seller dcsports87 | order 20-14868-40971 | base $131.38 (excl. ship/tax)","tags":["Prospects"],"frontImage":"https://lh3.googleusercontent.com/d/1dR5VmSoLhH792ZOfkzgED4JH1vWDK6ys=w1000","backImage":"https://lh3.googleusercontent.com/d/1p722lTx6HyPwNG6oklH2YJ64PCF6PPS5=w1000"},{"id":"zIS09oGu9Cm3NEVuQ2xt","owner":"dad","player":"Adou Thiero","year":"2025","set":"Topps Chrome","cardNumber":"TCAR-AT","variant":"Rookie Autographs Refractor","grade":"Raw","estimatedValue":"$0.00","datePurchased":"Jul 21, 2026","totalInvestment":"$45.00","ebayUrl":null,"ebaySeller":null,"notes":null,"tags":["Prospects"],"frontImage":"https://lh3.googleusercontent.com/d/1TBYocZ-kpvQ7LkSw5LHTvUNpUsIFTXnD=w1000","backImage":null},{"id":"6UDBEXHJHHnxilwkY0md","owner":"dad","player":"Arthur Kaluma","year":"2022","set":"Bowman Inception University","cardNumber":null,"variant":"Gold Foil V1 Auto /50","grade":"Raw","estimatedValue":"$0.00","datePurchased":"Jul 11, 2026","totalInvestment":"$8.88","ebayUrl":"https://www.ebay.com/itm/336674584263","ebaySeller":"comc_consignment","notes":"eBay: https://www.ebay.com/itm/336674584263 | seller comc_consignment | order 04-14896-19892 | base $8.88 (excl. ship/tax)","tags":["Prospects"],"frontImage":"https://lh3.googleusercontent.com/d/1CvynT-h2Ah8HBaJIgeP0CRGCoev3rqYk=w1000","backImage":"https://lh3.googleusercontent.com/d/1OnnOT7Qcjr4A5O3e-iOiNUWE2A-92w1z=w1000"},{"id":"EAEAQw1wEclmDi12JCxe","owner":"dad","player":"Arthur Kaluma","year":"2022","set":"Bowman University Best","cardNumber":null,"variant":"Best of 2022-23 Auto Green /99 SSP","grade":"Raw","estimatedValue":"$0.00","datePurchased":"Jul 11, 2026","totalInvestment":"$4.00","ebayUrl":"https://www.ebay.com/itm/306902354917","ebaySeller":"seiowasportscards","notes":"eBay: https://www.ebay.com/itm/306902354917 | seller seiowasportscards | order 13-14880-79186 | base $4.00 (excl. ship/tax)","tags":["Prospects"],"frontImage":"https://lh3.googleusercontent.com/d/1IylbhX3CeNYB9i2gDlwADQjJVxGIOr6h=w1000","backImage":"https://lh3.googleusercontent.com/d/1Lv3SGNTqKRfh2ghkllJH3MfsR2zUaliZ=w1000"},{"id":"FxtswP6EDfCBQ9us2hH6","owner":"dad","player":"Arthur Kaluma","year":"2022","set":"Bowman University Best","cardNumber":"BOA-AK","variant":"Speckle Auto /25","grade":"Raw","estimatedValue":"$0.00","datePurchased":"Jul 11, 2026","totalInvestment":"$19.99","ebayUrl":"https://www.ebay.com/itm/177799028600","ebaySeller":"cardcavecentral","notes":"eBay: https://www.ebay.com/itm/177799028600 | seller cardcavecentral | order 09-14887-38834 | base $19.99 (excl. ship/tax)","tags":["Prospects"],"frontImage":"https://lh3.googleusercontent.com/d/14xz0-0LusE3hp1lI-lYwbZii2BtOSj_m=w1000","backImage":"https://lh3.googleusercontent.com/d/1Kv8mY_cHWCdo9KT_qcVrjFGN0S2_VVqe=w1000"},{"id":"MJ0H2wZtyR5Z5ZPyvhPY","owner":"dad","player":"Arthur Kaluma","year":"2021","set":"Bowman Chrome University","cardNumber":null,"variant":"1st Refractor Orange /25 Rookie","grade":"Raw","estimatedValue":"$0.00","datePurchased":"Jul 11, 2026","totalInvestment":"$4.99","ebayUrl":"https://www.ebay.com/itm/285587697265","ebaySeller":"tannie7589","notes":"eBay: https://www.ebay.com/itm/285587697265 | seller tannie7589 | order 13-14880-77329 | base $4.99 (excl. ship/tax)","tags":["Prospects"],"frontImage":"https://lh3.googleusercontent.com/d/1HcXI1GCbTygOqsIYJ-i16kxN_OlD9M0P=w1000","backImage":"https://lh3.googleusercontent.com/d/1eNdSr2AKfK3IaGTBLtaglS8mwIXnsaRV=w1000"},{"id":"eFwArbXGSCwG9aNk77tW","owner":"dad","player":"Arthur Kaluma","year":"2022","set":"Bowman University Chrome","cardNumber":null,"variant":"1st Bowman Gold Refractor /50","grade":"Raw","estimatedValue":"$0.00","datePurchased":"Jul 11, 2026","totalInvestment":"$9.99","ebayUrl":"https://www.ebay.com/itm/327030336697","ebaySeller":"chacha_collectibles","notes":"eBay: https://www.ebay.com/itm/327030336697 | seller chacha_collectibles | order 14-14878-84414 | base $9.99 (excl. ship/tax)","tags":["Prospects"],"frontImage":"https://lh3.googleusercontent.com/d/1sB2gDdda7MV59yByT-93yx4AF_PziYl7=w1000","backImage":"https://lh3.googleusercontent.com/d/1jDFEGY400zgPoMxCZajmu8a1m_ryTmtl=w1000"},{"id":"YwvCCweuDNdwJCGcWZeT","owner":"dad","player":"Austin Reaves","year":"2021","set":"Panini One And One","cardNumber":null,"variant":"Rookie Dual RPA /49 3-Color Patch","grade":"Raw","estimatedValue":"$0.00","datePurchased":"Jul 11, 2026","totalInvestment":"$550.00","ebayUrl":"https://www.ebay.com/itm/318565138304","ebaySeller":"shiny_cards_vault","notes":"eBay: https://www.ebay.com/itm/318565138304 | seller shiny_cards_vault | order 01-14902-73484 | base AU $550.00 (excl. ship/tax) - PRICE IN AUD","tags":["Legends"],"frontImage":"https://lh3.googleusercontent.com/d/1DLBTkekwBAVvBTaIezlzjVvHUlteKZ2F=w1000","backImage":"https://lh3.googleusercontent.com/d/17SBjEl-01Pr_b_h5hWJbFDF2vMZhVhBu=w1000"},{"id":"ojsk915Nhp6razMCPXO6","owner":"dad","player":"Austin Reaves","year":"2021","set":"Panini Prizm Draft Picks","cardNumber":null,"variant":"Rookie Auto","grade":"Raw","estimatedValue":"$0.00","datePurchased":"Apr 20, 2025","totalInvestment":"$60.00","ebayUrl":"https://www.ebay.com/itm/286475009365","ebaySeller":"deuercards","notes":"eBay: https://www.ebay.com/itm/286475009365 | seller deuercards | order 24-12977-57200 | base $60.00 (excl. ship/tax) | ORIGINAL LISTING NO LONGER AVAILABLE (404) - no images, details to be filled in later","tags":["Legends"],"frontImage":null,"backImage":null},{"id":"zhR8TD3wYBXS4FmFH8jR","owner":"dad","player":"Austin Reaves","year":"2021","set":"Panini Obsidian","cardNumber":null,"variant":"Red Flood Jersey Auto","grade":"Raw","estimatedValue":"$0.00","datePurchased":"Jun 30, 2025","totalInvestment":"$80.00","ebayUrl":"https://www.ebay.com/itm/306363916978","ebaySeller":"atp_haya8","notes":"eBay: https://www.ebay.com/itm/306363916978 | seller atp_haya8 | order 06-13271-86027 | base $80.00 (excl. ship/tax) | ORIGINAL LISTING NO LONGER AVAILABLE (404) - low-res front image only, details to be filled in later","tags":["Legends"],"frontImage":"https://lh3.googleusercontent.com/d/1kBGx7JKtPsPozwbQ7C44C3uFLPVx46YN=w1000","backImage":null},{"id":"O63irVzdUNP12yhs0qBE","owner":"dad","player":"Dalton Knecht","year":"2024","set":"Panini Origins","cardNumber":null,"variant":"Rookie Patch Auto","grade":"Raw","estimatedValue":"$0.00","datePurchased":"Apr 26, 2025","totalInvestment":"$50.00","ebayUrl":"https://www.ebay.com/itm/326541161665","ebaySeller":"thrashnsonrips","notes":"eBay: https://www.ebay.com/itm/326541161665 | seller thrashnsonrips | order 01-13016-37835 | base $50.00 (excl. ship/tax) | ORIGINAL LISTING NO LONGER AVAILABLE (404) - no images, details to be filled in later","tags":["Other"],"frontImage":null,"backImage":null},{"id":"QGe6fBX8O8Jxd0zaR9nm","owner":"dad","player":"Dylan Harper","year":"2024","set":"Bowman's Best University","cardNumber":null,"variant":"Let It Rain Relic Auto","grade":"Raw","estimatedValue":"$0.00","datePurchased":"Jun 15, 2026","totalInvestment":"$355.00","ebayUrl":"https://www.ebay.com/itm/127913850238","ebaySeller":"dcsports87","notes":"eBay: https://www.ebay.com/itm/127913850238 | seller dcsports87 | order 12-14773-51738 | base $355.00 (excl. ship/tax)","tags":["Rising Stars"],"frontImage":"https://lh3.googleusercontent.com/d/1G810a7-g8SCgUX3-f--fjyFszibaQZ4s=w1000","backImage":"https://lh3.googleusercontent.com/d/1msrn_NW3SbVEpHoFPBbY5VupUVnuGk9j=w1000"},{"id":"esRb0eUZP04Mqo98j2wS","owner":"dad","player":"Dylan Harper","year":"2024","set":"Bowman's Best University","cardNumber":null,"variant":"Let It Rain Player-Worn Patch","grade":"Raw","estimatedValue":"$0.00","datePurchased":"Jun 3, 2026","totalInvestment":"$225.00","ebayUrl":"https://www.ebay.com/itm/198395037950","ebaySeller":"dads-toyz","notes":"eBay: https://www.ebay.com/itm/198395037950 | seller dads-toyz | order 20-14709-50441 | base $225.00 (excl. ship/tax)","tags":["Rising Stars"],"frontImage":"https://lh3.googleusercontent.com/d/1MT3E_mB6cMua1CIH1eajYHm7q2OwCD9C=w1000","backImage":"https://lh3.googleusercontent.com/d/11yfgZ4u4FprcdwFcQ8G7xHjgDxhnDJKM=w1000"},{"id":"pGua76YdMZWEdMnH5H09","owner":"dad","player":"Dylan Harper","year":"2025","set":"Topps Chrome","cardNumber":null,"variant":"Silver Refractor Issue Rookie","grade":"Raw","estimatedValue":"$0.00","datePurchased":"Jun 17, 2026","totalInvestment":"$571.00","ebayUrl":"https://www.ebay.com/itm/366475754997","ebaySeller":"tull_068","notes":"eBay: https://www.ebay.com/itm/366475754997 | seller tull_068 | order 15-14775-76649 | base $571.00 (excl. ship/tax)","tags":["Rising Stars"],"frontImage":"https://lh3.googleusercontent.com/d/18g5Rm51aBun2LbVwcfEQfe8YYNr_ubMi=w1000","backImage":"https://lh3.googleusercontent.com/d/12K1Rc6Z91sZHQwVJQYKnF65r5r7vxG_0=w1000"},{"id":"1lVNL4IgPlgROCkMR70A","owner":"dad","player":"Jerry West","year":"2022","set":"Panini Origins","cardNumber":null,"variant":"Universal Auto Gold 1/10","grade":"Raw","estimatedValue":"$0.00","datePurchased":"Jun 4, 2026","totalInvestment":"$184.99","ebayUrl":"https://www.ebay.com/itm/227341972629","ebaySeller":"deezcards_13","notes":"eBay: https://www.ebay.com/itm/227341972629 | seller deezcards_13 | order 27-14703-11074 | base $184.99 (excl. ship/tax)","tags":["Legends"],"frontImage":"https://lh3.googleusercontent.com/d/12wVhBQOTooWsY5OmLJren6lDK2aySB1R=w1000","backImage":"https://lh3.googleusercontent.com/d/1uA6-bozbYrok-fSJ7r2HffTP4NA_UMv6=w1000"},{"id":"2EVFwb3XJMLrJchvGmmF","owner":"dad","player":"Kobe Bryant","year":"1996","set":"Topps Chrome","cardNumber":"138","variant":"Base","grade":"PSA 8","estimatedValue":"$0.00","datePurchased":"Jul 22, 2026","totalInvestment":"$3,200.00","ebayUrl":null,"ebaySeller":"*chicagobred1,","notes":"eBay item 407088640229, seller *chicagobred1, cert 102788050. Hammer $3,200 (listing displayed $3,500). Order 08-14933-42092, Authenticity Guarantee. Per standing instruction, no value estimate entered.","tags":["Legends"],"frontImage":"https://lh3.googleusercontent.com/d/1nWjffuDFla4CCEujMbxLxfQJ01PZU2ne=w1000","backImage":null},{"id":"ARJI55Btgibzi1bmU9pv","owner":"dad","player":"Kobe Bryant","year":"1996","set":"Skybox E-X2000","cardNumber":"30","variant":"Rookie","grade":"Raw","estimatedValue":"$0.00","datePurchased":"Jun 2, 2026","totalInvestment":"$470.00","ebayUrl":"https://www.ebay.com/itm/317643967052","ebaySeller":"slabindex","notes":"eBay: https://www.ebay.com/itm/317643967052 | seller slabindex | order 12-14717-75014 | base $470.00 (excl. ship/tax)","tags":["Legends"],"frontImage":"https://lh3.googleusercontent.com/d/1RVULLLjZK6Q7bxrqQpBTu5vBcBKLZHvz=w1000","backImage":"https://lh3.googleusercontent.com/d/1wHsNqiQXOTsqIgPpfD9V8J2gg4LrYR8D=w1000"},{"id":"BWde2YBadIuxg5S2YxQY","owner":"dad","player":"Kobe Bryant","year":"1996","set":"Bowman's Best","cardNumber":"R23","variant":"Rookie","grade":"Raw","estimatedValue":"$0.00","datePurchased":"Jul 19, 2026","totalInvestment":"$93.00","ebayUrl":"https://www.ebay.com/itm/377342811559","ebaySeller":"dcsports87","notes":"eBay: https://www.ebay.com/itm/377342811559 | seller dcsports87 | order 16-14908-54023 | base $93.00 (excl. ship/tax)","tags":["Legends"],"frontImage":"https://lh3.googleusercontent.com/d/1O166w3BI7VUoWEwi7DzmOsGsUo6UOsTE=w1000","backImage":"https://lh3.googleusercontent.com/d/1aRTfDbTnhjhAVRSzSKnUaxjsZ4Vr47DG=w1000"},{"id":"LhZwkPmEB9bJsqDYLfl0","owner":"dad","player":"Kobe Bryant","year":"1996","set":"Upper Deck","cardNumber":"58","variant":"Rookie","grade":"Raw","estimatedValue":"$0.00","datePurchased":"Jul 19, 2026","totalInvestment":"$25.00","ebayUrl":"https://www.ebay.com/itm/188656706062","ebaySeller":"jeschw-1485","notes":"eBay: https://www.ebay.com/itm/188656706062 | seller jeschw-1485 | order 06-14924-95561 | base $25.00 (excl. ship/tax)","tags":["Legends"],"frontImage":"https://lh3.googleusercontent.com/d/13_Pdcn6vWDbSWKT7wrUSvoIpOzKGl3xX=w1000","backImage":"https://lh3.googleusercontent.com/d/1D_y-qPpfYLkLLh-yNrxIUfzEVhryMG-D=w1000"},{"id":"rQPX81qW2EJmuDYSvXGS","owner":"dad","player":"Kobe Bryant","year":"1996","set":"Topps Chrome","cardNumber":"YQ15","variant":"Youthquake Rookie","grade":"Raw","estimatedValue":"$0.00","datePurchased":"Jun 4, 2026","totalInvestment":"$900.00","ebayUrl":"https://www.ebay.com/itm/287326636880","ebaySeller":"foursportscards","notes":"eBay: https://www.ebay.com/itm/287326636880 | seller foursportscards | order 15-14721-13270 | base AU $900.00 (excl. ship/tax) - PRICE IN AUD | BGS slab, grade not stated in listing title - check slab and update condition","tags":["Legends"],"frontImage":"https://lh3.googleusercontent.com/d/1_XQgG1W9asdvuxXYr2OT_Fj_BLKiVKR0=w1000","backImage":"https://lh3.googleusercontent.com/d/1FmqWtZObR8DUOAOE5XiPXo_l_VsEC6bY=w1000"},{"id":"yi3vZSYeZUcxoaNBlkvX","owner":"dad","player":"Kobe Bryant","year":"1996","set":"Topps Finest","cardNumber":"269","variant":"Heirs Rookie","grade":"PSA 8","estimatedValue":"$0.00","datePurchased":"Jul 17, 2026","totalInvestment":"$1,850.00","ebayUrl":"https://www.ebay.com/itm/127926098235","ebaySeller":"beyourbestcards","notes":"eBay: https://www.ebay.com/itm/127926098235 | seller beyourbestcards | order 09-14911-38558 | base $1,850.00 (excl. $154.94 ship) | PSA 8","tags":["Legends"],"frontImage":"https://lh3.googleusercontent.com/d/1VALaJCwbTcmowyBtZ7QsEhy6jDheKKMX=w1000","backImage":"https://lh3.googleusercontent.com/d/1UgXcmcDKL5G4DRSEkPX5fqHHg8-a05uZ=w1000"},{"id":"wVtNwVijw2ZSWWU3onZe","owner":"dad","player":"Kobe Bryant / Luka Doncic","year":"2018","set":"Panini Crown Royale","cardNumber":"3","variant":"Mamba's Choice /99 (RC)","grade":"Raw","estimatedValue":"$0.00","datePurchased":"Jul 9, 2026","totalInvestment":"$950.00","ebayUrl":"https://www.ebay.com/itm/358626584966","ebaySeller":"bbl.pulls4","notes":"eBay: https://www.ebay.com/itm/358626584966 | seller bbl.pulls4 | order 16-14865-11929 | base $950.00 (excl. ship/tax)","tags":["Legends"],"frontImage":"https://lh3.googleusercontent.com/d/1QNSijRdYwg1OiHlKaQIToV5uCjZPDc04=w1000","backImage":"https://lh3.googleusercontent.com/d/1grNrd8iw1gm4AEeCNsoohkGsQu0n3Uh2=w1000"},{"id":"mcIt8tsUI0AjyTWOOhSs","owner":"dad","player":"Larry Bird / Julius Erving / Magic Johnson","year":"1980","set":"Topps","cardNumber":"174","variant":"Scoring Leader (Bird RC / Magic RC)","grade":"Raw","estimatedValue":"$0.00","datePurchased":"Jun 26, 2026","totalInvestment":"$2,050.00","ebayUrl":"https://www.ebay.com/itm/158012370011","ebaySeller":"etched_in_darkness","notes":"eBay: https://www.ebay.com/itm/158012370011 | seller etched_in_darkness | order 13-14817-43790 | base $2,050.00 (excl. ship/tax)","tags":["Legends"],"frontImage":"https://lh3.googleusercontent.com/d/1G60hUoKjNndxv7R64i6AM0y5aXXRyAej=w1000","backImage":"https://lh3.googleusercontent.com/d/1ulHQswM20xQ6H7q7uRvNvv2QYAoK5QnO=w1000"},{"id":"0CjxzzP2fOGHjMIM2nZL","owner":"dad","player":"Luka Doncic","year":"2018","set":"Panini Prizm","cardNumber":"280","variant":"Base Rookie","grade":"PSA 10","estimatedValue":"$0.00","datePurchased":"Jul 12, 2026","totalInvestment":"$225.00","ebayUrl":"https://www.ebay.com/itm/168436950433","ebaySeller":"mcplant1958","notes":"eBay: https://www.ebay.com/itm/168436950433 | seller mcplant1958 | order 08-14889-76418 | base $225.00 (excl. ship/tax) | PSA 10","tags":["Legends"],"frontImage":"https://lh3.googleusercontent.com/d/11HdDFWGIrWNDCckVd_5kcGUMJuffCGCi=w1000","backImage":"https://lh3.googleusercontent.com/d/10aHu5WkY4KkkpLPJGYq-POjzgC70NPc6=w1000"},{"id":"3D6ahvJsd2r87n3raKcH","owner":"dad","player":"Luka Doncic","year":"2018","set":"Panini Spectra","cardNumber":"108","variant":"Neon Blue Prizm Rookie","grade":"Raw","estimatedValue":"$0.00","datePurchased":"Jun 3, 2026","totalInvestment":"$1,512.00","ebayUrl":"https://www.ebay.com/itm/188431733509","ebaySeller":"mc_sportscards","notes":"eBay: https://www.ebay.com/itm/188431733509 | seller mc_sportscards | order 14-14718-98086 | base $1,512.00 (excl. ship/tax)","tags":["Legends"],"frontImage":"https://lh3.googleusercontent.com/d/1lAYOBYo6ywZENn3nu49bsyhAmXCc9iRn=w1000","backImage":"https://lh3.googleusercontent.com/d/1wIhPJuml59w05_2_W94S2EYHpyVBv8XZ=w1000"},{"id":"JazQwWA5WTz5Gn6D64cM","owner":"dad","player":"Luka Doncic","year":"2025","set":"Topps Signature Class","cardNumber":null,"variant":"Base","grade":"Raw","estimatedValue":"$0.00","datePurchased":"Jun 11, 2026","totalInvestment":"$2.00","ebayUrl":"https://www.ebay.com/itm/377220811670","ebaySeller":"cardboard_0","notes":"eBay: https://www.ebay.com/itm/377220811670 | seller cardboard_0 | order 22-14739-04390 | base $2.00 (excl. ship/tax)","tags":["Legends"],"frontImage":"https://lh3.googleusercontent.com/d/1MLJp0uh0ded23wfbS3zW6c_arsWOdoJS=w1000","backImage":"https://lh3.googleusercontent.com/d/1ZSVOih6_RnIzz-daSjOe85iQcpF8CR9j=w1000"},{"id":"Y0720zKUwD2zdI7sLbPa","owner":"dad","player":"Luka Doncic","year":"2018","set":"Panini Select","cardNumber":null,"variant":"RPA Rookie Jersey Auto Purple","grade":"Raw","estimatedValue":"$0.00","datePurchased":"Jun 7, 2026","totalInvestment":"$1,525.00","ebayUrl":"https://www.ebay.com/itm/406960748081","ebaySeller":"twominutewarning","notes":"eBay: https://www.ebay.com/itm/406960748081 | seller twominutewarning | order 15-14733-68463 | base $1,525.00 (excl. ship/tax)","tags":["Legends"],"frontImage":"https://lh3.googleusercontent.com/d/1eFjHxL2BgR_hO1qALSeY2kyFUEYAgVK3=w1000","backImage":"https://lh3.googleusercontent.com/d/1DBMqOmR_5pi2ZElkQund2q02zH8Wg0u5=w1000"},{"id":"ljqPX0GiuvFnOueOGPVo","owner":"dad","player":"Luka Doncic","year":"2018","set":"Panini Prizm","cardNumber":null,"variant":"Emergent Silver Prizm Rookie Auto","grade":"Raw","estimatedValue":"$0.00","datePurchased":"Jun 3, 2026","totalInvestment":"$399.00","ebayUrl":"https://www.ebay.com/itm/117067639490","ebaySeller":"tragos99","notes":"eBay: https://www.ebay.com/itm/117067639490 | seller tragos99 | order 16-14713-93243 | base $399.00 (excl. ship/tax) | SIGNED","tags":["Legends"],"frontImage":"https://lh3.googleusercontent.com/d/1JkFjxEKd7QHOAZC2uYHFiZNLz4B4slUe=w1000","backImage":"https://lh3.googleusercontent.com/d/1x1guFElYLj7Vuyyw-gy4GPW5N8Zyf4ZV=w1000"},{"id":"ycI7V4GMOJEgL83OPPVK","owner":"dad","player":"Luka Doncic","year":"2018","set":"Panini Prizm","cardNumber":"280","variant":"Base Rookie","grade":"PSA 10","estimatedValue":"$0.00","datePurchased":"Jun 7, 2026","totalInvestment":"$375.00","ebayUrl":"https://www.ebay.com/itm/267690003345","ebaySeller":"tenfourca","notes":"eBay: https://www.ebay.com/itm/267690003345 | seller tenfourca | order 15-14731-45620 | base $375.00 (excl. ship/tax) | PSA 10 | 2nd copy - other PSA 10 #280 bought Jul 12 2026","tags":["Legends"],"frontImage":"https://lh3.googleusercontent.com/d/1JXsGgm3TjcNuH3t8lqwlOa0YDWbM1BMf=w1000","backImage":"https://lh3.googleusercontent.com/d/1yYuoLw8a4rFsbQG1JW3MVTSCpTFyE5SE=w1000"},{"id":"ypNHOPwlq8ogn9FrekRa","owner":"dad","player":"Luka Doncic","year":"2024","set":"Panini Obsidian","cardNumber":null,"variant":"Supernova Electric Purple","grade":"Raw","estimatedValue":"$0.00","datePurchased":"Jul 6, 2026","totalInvestment":"$49.99","ebayUrl":"https://www.ebay.com/itm/326411671670","ebaySeller":"thewalloffame","notes":"eBay: https://www.ebay.com/itm/326411671670 | seller thewalloffame | order 25-14835-79900 | base $49.99 (excl. ship/tax)","tags":["Legends"],"frontImage":"https://lh3.googleusercontent.com/d/1IHwEEN7zyPBHfyWwhP9hZdZWeReBe0YZ=w1000","backImage":"https://lh3.googleusercontent.com/d/19525QF6KRJufYsqXCqJ22p771ZokDjt5=w1000"},{"id":"Kyk9jwsJpgJ8btWaOBIm","owner":"dad","player":"Luka Doncic / Austin Reaves","year":"2024","set":"Panini Instant","cardNumber":"499","variant":"Base","grade":"Raw","estimatedValue":"$0.00","datePurchased":"Jul 6, 2026","totalInvestment":"$11.49","ebayUrl":"https://www.ebay.com/itm/326528053355","ebaySeller":"twinsjake","notes":"eBay: https://www.ebay.com/itm/326528053355 | seller twinsjake | order 26-14835-07625 | base $11.49 (excl. ship/tax) | copy 1 of 2 (other copy in Leo's Collection)","tags":["Legends"],"frontImage":"https://lh3.googleusercontent.com/d/1EAKlRRrgSnLrlJInQYxOEqjf_a9ILUiM=w1000","backImage":null},{"id":"V3clpXnLwlYun0r05zeg","owner":"dad","player":"Luke Kennard","year":"2017","set":"Panini Select","cardNumber":"RJA-LKN","variant":"Rookie Jersey Auto /199","grade":"Raw","estimatedValue":"$0.00","datePurchased":"Apr 18, 2026","totalInvestment":"$15.20","ebayUrl":"https://www.ebay.com/itm/236761358410","ebaySeller":"comc_consignment","notes":"eBay: https://www.ebay.com/itm/236761358410 | seller comc_consignment | order 19-14509-80002 | base $15.20 (excl. ship/tax) | ORIGINAL LISTING NO LONGER AVAILABLE (404) - no images, details to be filled in later","tags":["Other"],"frontImage":null,"backImage":null},{"id":"Wafy50GsoOyQu5jAptMz","owner":"dad","player":"Magic Johnson","year":"2023","set":"Panini Flawless","cardNumber":"FP-MGJ","variant":"Performances Gold Auto /10","grade":"Raw","estimatedValue":"$0.00","datePurchased":"Jul 20, 2026","totalInvestment":"$300.00","ebayUrl":"https://www.ebay.com/itm/366440685935","ebaySeller":"hotdiggitydog_1978","notes":"eBay: https://www.ebay.com/itm/366440685935 | seller hotdiggitydog_1978 | order 27-14892-80640 | base $300.00 (excl. ship/tax)","tags":["Legends"],"frontImage":"https://lh3.googleusercontent.com/d/1Oc4NNyzFaJaUFZqAB4sbRQZghh0xlvDo=w1000","backImage":"https://lh3.googleusercontent.com/d/1QEETSbrcCMjO9jIthDAlB5D5fYue4vk4=w1000"},{"id":"JnLoFwkQ1AxbKBsiuEQe","owner":"dad","player":"Walker Kessler","year":"2022","set":"Panini Chronicles","cardNumber":null,"variant":"Gold Standard RPA /99","grade":"Raw","estimatedValue":"$0.00","datePurchased":"Jul 9, 2026","totalInvestment":"$40.00","ebayUrl":"https://www.ebay.com/itm/226037076506","ebaySeller":"randjcardsokc","notes":"eBay: https://www.ebay.com/itm/226037076506 | seller randjcardsokc | order 04-14886-08895 | base $40.00 (excl. ship/tax)","tags":["Prospects"],"frontImage":"https://lh3.googleusercontent.com/d/1B5d4mnsVJtT890rK_Ckx4ljCzkX-2b8g=w1000","backImage":"https://lh3.googleusercontent.com/d/1wlXOaMmxqOI4g9-xNgT9o0egCwsz1D6i=w1000"},{"id":"Jr4KbwJ7CiXDEre3q4Ch","owner":"dad","player":"Walker Kessler","year":"2022","set":"Panini Obsidian","cardNumber":null,"variant":"FOTL RPA Electric Blue /27 (encased, Panini seal)","grade":"Raw","estimatedValue":"$0.00","datePurchased":"Jul 9, 2026","totalInvestment":"$150.00","ebayUrl":"https://www.ebay.com/itm/137496430234","ebaySeller":"nathtije_3","notes":"eBay: https://www.ebay.com/itm/137496430234 | seller nathtije_3 | order 08-14879-35596 | base $150.00 (excl. ship/tax)","tags":["Prospects"],"frontImage":"https://lh3.googleusercontent.com/d/1L8K_F0USeYUcQTTBcw7PBU-yGrJ8Ik9R=w1000","backImage":null},{"id":"Wbj7gE1aXyr5olflGN7i","owner":"dad","player":"Walker Kessler","year":"2022","set":"Panini Recon","cardNumber":"RRS-WKK","variant":"Rookie Auto Patch","grade":"Raw","estimatedValue":"$0.00","datePurchased":"Jul 6, 2026","totalInvestment":"$59.99","ebayUrl":"https://www.ebay.com/itm/355093991201","ebaySeller":"jag_player","notes":"eBay: https://www.ebay.com/itm/355093991201 | seller jag_player | order 26-14833-94354 | base $59.99 (excl. ship/tax)","tags":["Prospects"],"frontImage":"https://lh3.googleusercontent.com/d/1ywo-PPyKy5c30HLYOVFLNXw8EzcvnWiw=w1000","backImage":"https://lh3.googleusercontent.com/d/1sbQ8_jBKl_PFfkU942939Hk2IhVmfJV0=w1000"},{"id":"e1K1O8hOC4FlP18uP7SD","owner":"dad","player":"Walker Kessler","year":"2022","set":"Panini Select","cardNumber":null,"variant":"Blue 2-Color Patch","grade":"Raw","estimatedValue":"$0.00","datePurchased":"Jul 8, 2026","totalInvestment":"$36.75","ebayUrl":"https://www.ebay.com/itm/126082199557","ebaySeller":"jormar_3280","notes":"eBay: https://www.ebay.com/itm/126082199557 | seller jormar_3280 | order 20-14853-92860 | base $36.75 (excl. ship/tax)","tags":["Prospects"],"frontImage":"https://lh3.googleusercontent.com/d/1NeBsxy7v9fXa7cMwSVi_RZkh5JCo6mG3=w1000","backImage":"https://lh3.googleusercontent.com/d/1Y4baHJGRqy8ThKTnWOHnOxsvERUZTRA9=w1000"},{"id":"hXzskFlELxfwUIjXEBbX","owner":"dad","player":"Walker Kessler","year":"2022","set":"Panini Court Kings","cardNumber":null,"variant":"Rookie Auto Purple /49","grade":"Raw","estimatedValue":"$0.00","datePurchased":"Jul 6, 2026","totalInvestment":"$49.99","ebayUrl":"https://www.ebay.com/itm/326411671670","ebaySeller":"thewalloffame","notes":"eBay: https://www.ebay.com/itm/326411671670 | seller thewalloffame | order 25-14835-79900 | base $49.99 (excl. ship/tax)","tags":["Prospects"],"frontImage":"https://lh3.googleusercontent.com/d/1BIw21xTUK0rVoJW5NwBJV4sOa0PW2cZE=w1000","backImage":"https://lh3.googleusercontent.com/d/1YjP9vpnrsYT67vCQ0HEx9J-BBMBmRC-6=w1000"},{"id":"cIEEL4uVeDGVCaK9LAiu","owner":"son","player":"Adou Thiero","year":"2025","set":"Topps Three","cardNumber":"RPH-AT","variant":"Triple Patch Auto /49","grade":"Raw","estimatedValue":"$0.00","datePurchased":"Jul 11, 2026","totalInvestment":"$59.00","ebayUrl":"https://www.ebay.com/itm/157874846901","ebaySeller":"aitiger","notes":"eBay: https://www.ebay.com/itm/157874846901 | seller aitiger | order 14-14876-28149 | base $59.00 (excl. ship/tax)","tags":["Prospects"],"frontImage":"https://lh3.googleusercontent.com/d/1a7S3maPfIlFG_TXx1WB5jusbyDcOwrLO=w1000","backImage":"https://lh3.googleusercontent.com/d/19HmuMZ1KF6M95U9NVSP8JH14LMbQJX0E=w1000"},{"id":"5QPSDSA1FatdLINanXxp","owner":"son","player":"Arthur Kaluma","year":"2022","set":"Bowman University Best","cardNumber":null,"variant":"Best Of Blue Refractor Auto /150","grade":"Raw","estimatedValue":"$0.00","datePurchased":"Jul 11, 2026","totalInvestment":"$2.66","ebayUrl":"https://www.ebay.com/itm/376272566354","ebaySeller":"kathir_9129","notes":"eBay: https://www.ebay.com/itm/376272566354 | seller kathir_9129 | order 18-14872-00432 | base $2.66 (excl. ship/tax)","tags":["Prospects"],"frontImage":"https://lh3.googleusercontent.com/d/138v_rPnAUiTnTNTR2amU5wFeAjMOutvw=w1000","backImage":"https://lh3.googleusercontent.com/d/1RcrvmreGOtY0BFrHEcf3Yv4nfJ3zYD2q=w1000"},{"id":"TEgzLPRHpiQXw9Tdykvh","owner":"son","player":"Arthur Kaluma","year":"2022","set":"Bowman University","cardNumber":null,"variant":"1st Chrome Purple Parallel /299","grade":"Raw","estimatedValue":"$0.00","datePurchased":"Jul 11, 2026","totalInvestment":"$0.99","ebayUrl":"https://www.ebay.com/itm/168238556473","ebaySeller":"pak.rips","notes":"eBay: https://www.ebay.com/itm/168238556473 | seller pak.rips | order 20-14868-50523 | base $0.99 (excl. ship/tax)","tags":["Prospects"],"frontImage":"https://lh3.googleusercontent.com/d/1kzF1osTxAPiXHCvnDi4nVXv-HbZvBEOt=w1000","backImage":null},{"id":"OAB8UcHzb0KgqkwvU5xG","owner":"son","player":"Austin Reaves","year":"2021","set":"Panini Obsidian","cardNumber":"202","variant":"Rookie Patch Auto Green /25","grade":"Raw","estimatedValue":"$0.00","datePurchased":"Apr 29, 2025","totalInvestment":"$217.50","ebayUrl":"https://www.ebay.com/itm/156918424291","ebaySeller":"rizzcardss","notes":"eBay: https://www.ebay.com/itm/156918424291 | seller rizzcardss | order 27-12995-76315 | base $217.50 (excl. ship/tax) | ORIGINAL LISTING NO LONGER AVAILABLE (404) - low-res front image only, details to be filled in later","tags":["Legends"],"frontImage":"https://lh3.googleusercontent.com/d/18f2q0BY8sjdfhY1y9pCwU2IS_87Ra4_P=w1000","backImage":null},{"id":"1cKzuIEF1E2ZkXDR0rei","owner":"son","player":"Cooper Flagg","year":"2025","set":"Topps Signature Class","cardNumber":null,"variant":"Rookie","grade":"Raw","estimatedValue":"$0.00","datePurchased":"Jul 21, 2026","totalInvestment":"$0.00","ebayUrl":null,"ebaySeller":null,"notes":"Manually added per Gideon - not an eBay purchase. Cooper Flagg Topps Signature Class rookie, ungraded. No purchase price/date/images on file.","tags":["Other"],"frontImage":null,"backImage":null},{"id":"MJivJUBrW1ED4hKnYEpN","owner":"son","player":"Dylan Harper","year":"2024","set":"Bowman's Best University","cardNumber":null,"variant":"Best of '24 Autographs Yellow /75","grade":"Raw","estimatedValue":"$0.00","datePurchased":"Jun 2, 2026","totalInvestment":"$168.50","ebayUrl":"https://www.ebay.com/itm/397994089470","ebaySeller":"pushright","notes":"eBay: https://www.ebay.com/itm/397994089470 | seller pushright | order 04-14730-76300 | base $168.50 (excl. ship/tax)","tags":["Rising Stars"],"frontImage":"https://lh3.googleusercontent.com/d/1ZIMg3NVrcn5vJMDMEJvPrGar77UvMgc4=w1000","backImage":"https://lh3.googleusercontent.com/d/1oNulK6wEY0xhntI36oENWwb8geSkeGFY=w1000"},{"id":"4fvSJQDSsf3yeAe01P3S","owner":"son","player":"Jalen Brunson","year":"2026","set":"Topps Now","cardNumber":"339","variant":"Base","grade":"Raw","estimatedValue":"$0.00","datePurchased":"Jul 20, 2026","totalInvestment":"$5.00","ebayUrl":"https://www.ebay.com/itm/267729864990","ebaySeller":"pattylscardstop","notes":"eBay: https://www.ebay.com/itm/267729864990 | seller pattylscardstop | order 26-14893-49465 | base $5.00 (excl. ship/tax)","tags":["Other"],"frontImage":"https://lh3.googleusercontent.com/d/1Egw3hbUvzS1VaU6o5Yua-dubkgHUVvm7=w1000","backImage":"https://lh3.googleusercontent.com/d/1DR3RDTjdmA3_m33qYmh40rZS1U--qR80=w1000"},{"id":"ARayfPypf8B730reqVNx","owner":"son","player":"Kobe Bryant","year":"1996","set":"Topps","cardNumber":"138","variant":"Base","grade":"Raw","estimatedValue":"$0.00","datePurchased":"Jul 21, 2026","totalInvestment":"$0.00","ebayUrl":null,"ebaySeller":null,"notes":"Manually added per Gideon - not an eBay purchase. Base Kobe Topps #138, ungraded. No purchase price/date/images on file.","tags":["Legends"],"frontImage":null,"backImage":null},{"id":"QJvMMf1wnB7MyJYn3hQ0","owner":"son","player":"Kobe Bryant","year":"1996","set":"Skybox Premium","cardNumber":"55","variant":"SP Rookie","grade":"Raw","estimatedValue":"$0.00","datePurchased":"Jul 19, 2026","totalInvestment":"$40.00","ebayUrl":"https://www.ebay.com/itm/287466416550","ebaySeller":"redcedarcards","notes":"eBay: https://www.ebay.com/itm/287466416550 | seller redcedarcards | order 16-14906-13982 | base $40.00 (excl. ship/tax)","tags":["Legends"],"frontImage":"https://lh3.googleusercontent.com/d/1cnGFVRt-5oO4scaVVYx8qE-MW-giPAH_=w1000","backImage":"https://lh3.googleusercontent.com/d/1T6q8RfIQ816SfWsgtQr8yvzl2WzIfKYu=w1000"},{"id":"c5lusFjoJx7CL3tKA1Xi","owner":"son","player":"Kobe Bryant","year":"1996","set":"Upper Deck Collector's Choice","cardNumber":"58","variant":"Rookie","grade":"Raw","estimatedValue":"$0.00","datePurchased":"Jul 19, 2026","totalInvestment":"$25.00","ebayUrl":"https://www.ebay.com/itm/168531927853","ebaySeller":"robbic1975","notes":"eBay: https://www.ebay.com/itm/168531927853 | seller robbic1975 | order 07-14921-63128 | base $25.00 (excl. ship/tax)","tags":["Legends"],"frontImage":"https://lh3.googleusercontent.com/d/1CIWL9JXQugqkvG3fd-8srDw_BMw22j1G=w1000","backImage":null},{"id":"vm7Bhxx7yO6F1eAf78VK","owner":"son","player":"Kobe Bryant","year":"1996","set":"Press Pass","cardNumber":"13","variant":"Base","grade":"Raw","estimatedValue":"$0.00","datePurchased":"Jul 19, 2026","totalInvestment":"$19.98","ebayUrl":"https://www.ebay.com/itm/178313968631","ebaySeller":"mad_l05","notes":"eBay: https://www.ebay.com/itm/178313968631 | seller mad_l05 | order 16-14906-10177 | base $19.98 (excl. ship/tax)","tags":["Legends"],"frontImage":"https://lh3.googleusercontent.com/d/1Z1hcfyWBYYzikstdG-7X8IFRswH7pyp7=w1000","backImage":null},{"id":"ZjdlLPUs4gQCmJMGRNwi","owner":"son","player":"Luka Doncic","year":"2025","set":"Topps Now","cardNumber":"5","variant":"Base","grade":"Raw","estimatedValue":"$0.00","datePurchased":"Jun 11, 2026","totalInvestment":"$5.77","ebayUrl":"https://www.ebay.com/itm/298401152676","ebaySeller":"gza73","notes":"eBay: https://www.ebay.com/itm/298401152676 | seller gza73 | order 21-14741-17244 | base $5.77 (excl. ship/tax)","tags":["Legends"],"frontImage":"https://lh3.googleusercontent.com/d/19I0Dvw-0kX649ycXPiIblvaj0wk4V_Gu=w1000","backImage":"https://lh3.googleusercontent.com/d/1zLi9TY78RkkuHN11joriBb90VWZ8wXSy=w1000"},{"id":"l3vwEamUlNExDTbUXYyH","owner":"son","player":"Luka Doncic","year":"2018","set":"Panini Prizm","cardNumber":null,"variant":"Emergent Silver Prizm Rookie Auto (BGS COA)","grade":"Raw","estimatedValue":"$0.00","datePurchased":"Jun 7, 2026","totalInvestment":"$319.99","ebayUrl":"https://www.ebay.com/itm/327191712646","ebaySeller":"4070joeb","notes":"eBay: https://www.ebay.com/itm/327191712646 | seller 4070joeb | order 07-14743-96545 | base $319.99 (excl. ship/tax) | AUTO SIGNED, BGS COA","tags":["Legends"],"frontImage":"https://lh3.googleusercontent.com/d/1HZYAjdRHruvuaMvSUJYueexwssBAmuJu=w1000","backImage":"https://lh3.googleusercontent.com/d/1fgcziQzR7YohMvcmNhz4V56P2Uc2RukI=w1000"},{"id":"QqLDq1bUCVAbPgnwIgUb","owner":"son","player":"Luka Doncic / Austin Reaves","year":"2024","set":"Panini Instant","cardNumber":"499","variant":"Base","grade":"Raw","estimatedValue":"$0.00","datePurchased":"Jul 6, 2026","totalInvestment":"$11.49","ebayUrl":"https://www.ebay.com/itm/326528053355","ebaySeller":"twinsjake","notes":"eBay: https://www.ebay.com/itm/326528053355 | seller twinsjake | order 04-14871-61336 | base $11.49 (excl. ship/tax) | copy 2 of 2 (other copy in Gideon's Collection)","tags":["Legends"],"frontImage":"https://lh3.googleusercontent.com/d/1N3bfwhxteFmn7wN_RdjRGnEho1rYPoQm=w1000","backImage":"https://lh3.googleusercontent.com/d/1ZHaYwb7JtlsHmiBGUiU1UO5JdcrLVzJS=w1000"},{"id":"OuwPalB0Woj34tGLhLE5","owner":"son","player":"Victor Wembanyama","year":"2023","set":"Topps Now","cardNumber":"VW-3","variant":"History for Wemby Rookie","grade":"Raw","estimatedValue":"$0.00","datePurchased":"Jun 3, 2026","totalInvestment":"$42.99","ebayUrl":"https://www.ebay.com/itm/377220130740","ebaySeller":"ladybuggboro2004","notes":"eBay: https://www.ebay.com/itm/377220130740 | seller ladybuggboro2004 | order 03-14733-34663 | base $42.99 (excl. ship/tax) | back image not clearly identified on listing","tags":["Other"],"frontImage":null,"backImage":null},{"id":"oaLupBnKT3hxAKFKgWq9","owner":"son","player":"Victor Wembanyama","year":"2023","set":"Panini Donruss","cardNumber":"220","variant":"Rated Rookie","grade":"Raw","estimatedValue":"$0.00","datePurchased":"Jun 2, 2026","totalInvestment":"$14.99","ebayUrl":"https://www.ebay.com/itm/147348288795","ebaySeller":"precise_cc","notes":"eBay: https://www.ebay.com/itm/147348288795 | seller precise_cc | order 18-14708-16635 | base $14.99 (excl. ship/tax)","tags":["Other"],"frontImage":"https://lh3.googleusercontent.com/d/1nT-whHVvqSICQf9_A75IONvT0MPn00nk=w1000","backImage":"https://lh3.googleusercontent.com/d/19mQ9Bkuw0pqU5qGqeO9JdzIEFLyGxFHW=w1000"},{"id":"4ZeqTx4NdxXhxT64ruJZ","owner":"son","player":"Walker Kessler","year":"2022","set":"Panini Obsidian","cardNumber":null,"variant":"Red Rookie Patch Auto RPA (sealed)","grade":"Raw","estimatedValue":"$0.00","datePurchased":"Jul 19, 2026","totalInvestment":"$60.00","ebayUrl":"https://www.ebay.com/itm/377338281650","ebaySeller":"justinw13","notes":"eBay: https://www.ebay.com/itm/377338281650 | seller justinw13 | order 25-14893-60467 | base $60.00 (excl. ship/tax)","tags":["Prospects"],"frontImage":"https://lh3.googleusercontent.com/d/1yK8Zuzi_Wp1qgA8cs2SoFMXOhQZ7E0M9=w1000","backImage":null}]
+</script>
+
+<script>
+(function(){
+"use strict";
+const FIREBASE_URL = "https://card-album-47d9d-default-rtdb.firebaseio.com"; // e.g. https://passed-down-xxxxx-default-rtdb.firebaseio.com
+
+/* ===================== storage helpers =====================
+   shared=false (password-remembered flags): stays on this device only, via localStorage.
+   shared=true (stories/thesis/photos/stat corrections): synced to everyone, via Firebase. */
+async function storeGet(key, shared){
+  if(!shared){
+    try{ return localStorage.getItem(key); }catch(e){ return null; }
+  }
+  try{
+    const res = await fetch(FIREBASE_URL + '/' + encodeURIComponent(key) + '.json');
+    if(!res.ok) return null;
+    const data = await res.json();
+    return (data === null || data === undefined) ? null : data;
+  }catch(e){ return null; }
+}
+async function storeSetWithRetry(key, value, shared, attempts){
+  if(!shared){
+    try{ localStorage.setItem(key, value); return true; }catch(e){ return false; }
+  }
+  attempts = attempts || 3;
+  for(let i=0;i<attempts;i++){
+    try{
+      const res = await fetch(FIREBASE_URL + '/' + encodeURIComponent(key) + '.json', {
+        method: 'PUT', headers: {'Content-Type':'application/json'}, body: JSON.stringify(value)
+      });
+      if(res.ok) return true;
+    }catch(e){}
+    if(i < attempts-1) await new Promise(r=>setTimeout(r, 350*(i+1)));
+  }
+  return false;
+}
+function showBanner(msg){
+  let el = document.getElementById('toastBanner');
+  el.textContent = msg;
+  requestAnimationFrame(()=>{ el.style.opacity = '1'; });
+  clearTimeout(el._t);
+  el._t = setTimeout(()=>{ el.style.opacity = '0'; }, 5000);
+}
+
+function esc(s){ if(s===null||s===undefined) return ''; return String(s).replace(/[&<>"']/g, c=>({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;',"'":'&#39;'}[c])); }
+function initials(name){ return name.split(/[\s&/]+/).filter(Boolean).slice(0,2).map(w=>w[0]).join('').toUpperCase(); }
+function slug(tag){ return tag.replace(/\s+/g,'-'); }
+function hashAngle(id){
+  let h = 0;
+  for(let i=0;i<id.length;i++){ h = (h*31 + id.charCodeAt(i)) | 0; }
+  return ((Math.abs(h) % 700)/100 - 3.5).toFixed(2);
+}
+function fileToCompressedDataUrl(file){
+  return new Promise((resolve, reject)=>{
+    const reader = new FileReader();
+    reader.onload = () => {
+      const img = new Image();
+      img.onload = () => {
+        const maxW = 900;
+        const scale = Math.min(1, maxW / img.width);
+        const w = Math.round(img.width * scale);
+        const h = Math.round(img.height * scale);
+        const canvas = document.createElement('canvas');
+        canvas.width = w; canvas.height = h;
+        const ctx = canvas.getContext('2d');
+        ctx.drawImage(img, 0, 0, w, h);
+        resolve(canvas.toDataURL('image/jpeg', 0.72));
+      };
+      img.onerror = reject;
+      img.src = reader.result;
+    };
+    reader.onerror = reject;
+    reader.readAsDataURL(file);
+  });
+}
+
+/* ===================== state ===================== */
+const state = {
+  cards: [], loaded: false, tab: "all", activeTags: new Set(), search: "",
+  openId: null, flipped: false, editingStatsFor: null
+};
+let STORIES = {};
+let THESES = {};
+let PHOTOS = {};
+let OVERRIDES = {};
+const STAT_KEYS = ['set','year','variant','cardNumber','grade'];
+
+const GATE_PASSWORD = "KobeDaGOAT";
+const EDIT_PASSWORD = "ThieroDaGOAT";
+async function init(){
+  const unlocked = await storeGet('gate_unlocked', false);
+  if(unlocked === 'yes'){ boot(); } else { renderGate(); }
+}
+function renderGate(msg){
+  const app = document.getElementById('app');
+  app.innerHTML = `
+    <div style="max-width:340px;margin:70px auto;padding:26px 22px;background:var(--paper-light);border-radius:14px;box-shadow:0 6px 20px var(--shadow);text-align:center;">
+      <div style="font-family:var(--font-display);font-weight:700;font-size:26px;">Passed Down</div>
+      <div style="font-family:var(--font-hand);font-size:18px;color:var(--ink-soft);margin:2px 0 18px;">enter the password to open the album</div>
+      <input type="password" id="gatePw" style="width:100%;padding:10px 12px;border-radius:8px;border:1px solid var(--paper-deep);font-family:var(--font-mono);font-size:15px;margin-bottom:10px;box-sizing:border-box;" placeholder="password" autocomplete="off">
+      ${msg ? `<div style="color:#8c3a2a;font-family:var(--font-mono);font-size:12px;margin-bottom:10px;">${esc(msg)}</div>` : ''}
+      <button class="btn primary" id="gateSubmit" style="width:100%;">Unlock</button>
+    </div>`;
+  const submit = async ()=>{
+    const val = document.getElementById('gatePw').value;
+    if(val === GATE_PASSWORD){
+      await storeSetWithRetry('gate_unlocked', 'yes', false);
+      boot();
+    } else {
+      renderGate('Wrong password — try again.');
+    }
+  };
+  document.getElementById('gateSubmit').addEventListener('click', submit);
+  document.getElementById('gatePw').addEventListener('keydown', (e)=>{ if(e.key==='Enter') submit(); });
+  document.getElementById('gatePw').focus();
+}
+
+async function boot(){
+  render();
+  const raw = document.getElementById('seed-data').textContent;
+  let cards = JSON.parse(raw);
+  const storiesRaw = await storeGet('stories', true);
+  if(storiesRaw){ try{ STORIES = JSON.parse(storiesRaw); }catch(e){ STORIES = {}; } }
+  const thesesRaw = await storeGet('theses', true);
+  if(thesesRaw){ try{ THESES = JSON.parse(thesesRaw); }catch(e){ THESES = {}; } }
+  const photosRaw = await storeGet('photos', true);
+  if(photosRaw){ try{ PHOTOS = JSON.parse(photosRaw); }catch(e){ PHOTOS = {}; } }
+  const overridesRaw = await storeGet('overrides', true);
+  if(overridesRaw){ try{ OVERRIDES = JSON.parse(overridesRaw); }catch(e){ OVERRIDES = {}; } }
+  cards.forEach(c=>{
+    c.story = STORIES[c.id] || '';
+    c.thesis = THESES[c.player] || '';
+    const p = PHOTOS[c.id] || {};
+    c.frontImage = p.front || c.frontImage || null;
+    c.backImage = p.back || c.backImage || null;
+    const ov = OVERRIDES[c.id];
+    if(ov){ STAT_KEYS.forEach(k=>{ if(ov[k] !== undefined) c[k] = ov[k]; }); }
+  });
+  state.cards = cards;
+  state.loaded = true;
+  render();
+}
+
+/* ===================== derived ===================== */
+const ALL_TAGS = ["Legends","Prospects","Rising Stars","Other"];
+function ownerLabel(o){ return o === 'dad' ? "Gideon's Collection" : "Leo's Collection"; }
+function filteredCards(){
+  return state.cards.filter(c=>{
+    if(state.tab !== 'all' && c.owner !== state.tab) return false;
+    if(state.activeTags.size > 0 && !(c.tags||[]).some(t=>state.activeTags.has(t))) return false;
+    if(state.search.trim()){
+      const q = state.search.trim().toLowerCase();
+      if(!c.player.toLowerCase().includes(q) && !(c.set||'').toLowerCase().includes(q)) return false;
+    }
+    return true;
+  }).sort((a,b)=> (b.datePurchased||'').localeCompare(a.datePurchased||'') || a.player.localeCompare(b.player));
+}
+
+/* ===================== render pieces ===================== */
+function pinCardHtml(c){
+  const angle = hashAngle(c.id);
+  const photo = c.frontImage ? `<img src="${c.frontImage}" alt="${esc(c.player)}">` : `<div class="placeholder-ph">${esc(initials(c.player))}</div>`;
+  const lock = (c.owner === 'son') ? `<div class="pin-lock" title="Not for trade">🔒</div>` : '';
+  const subLine = c.variant || c.set || '';
+  return `<div class="pin-card" style="transform:rotate(${angle}deg)" data-open="${c.id}">
+    <div class="pin-photo">${photo}<div class="pin-owner ${c.owner}"></div>${lock}</div>
+    <div class="pin-caption">${esc(c.player)}</div>
+    <div class="pin-sub">${esc(subLine)}</div>
+  </div>`;
+}
+function renderCorkboard(){
+  const list = filteredCards();
+  const empty = list.length === 0 ? `<div class="empty-note">nothing matches — try clearing a filter</div>` : '';
+  return `<div class="corkboard"><div class="grid">${empty}${list.map(pinCardHtml).join('')}</div></div>`;
+}
+function renderSpread(c){
+  const frontPh = `<div class="placeholder-ph" data-addphoto="front" style="cursor:pointer;">${esc(initials(c.player))}<br><span style="font-family:var(--font-mono);font-size:10px;color:#a8967a;">tap to add front</span></div>`;
+  const backPh = `<div class="placeholder-ph" data-addphoto="back" style="font-size:13px;color:#a8967a;cursor:pointer;">tap to add back photo</div>`;
+  const frontFace = c.frontImage ? `${frontPh}<img src="${c.frontImage}" alt="front" style="position:absolute;inset:0;width:100%;height:100%;object-fit:cover;" onerror="this.remove()">` : frontPh;
+  const backFace = c.backImage ? `${backPh}<img src="${c.backImage}" alt="back" style="position:absolute;inset:0;width:100%;height:100%;object-fit:cover;" onerror="this.remove()">` : backPh;
+  const tags = (c.tags||[]).map(t=>`<span class="tag-chip ${slug(t)}">${esc(t)}</span>`).join('');
+  const STAT_FIELDS = [['set','Brand'],['year','Year'],['variant','Parallel'],['cardNumber','Card #'],['grade','Grade']];
+  let statBlock;
+  if(state.editingStatsFor === c.id){
+    statBlock = `<div class="stat-block" id="statEditBlock">
+      ${STAT_FIELDS.map(([key,label])=>`
+        <div class="stat-row"><span class="k">${label}</span>
+          <input class="stat-edit-input" data-statfield="${key}" value="${esc(c[key]||'')}">
+        </div>`).join('')}
+      <div style="text-align:right;margin-top:4px;"><button class="btn ghost" data-stats-done="1" style="font-size:11px;padding:4px 10px;">done</button></div>
+    </div>`;
+  } else {
+    const statRows = STAT_FIELDS.filter(([key])=>c[key]).map(([key,label])=>`<div class="stat-row"><span class="k">${label}</span><span class="v">${esc(c[key])}</span></div>`).join('');
+    statBlock = `<div class="stat-block">
+      ${statRows || '<div class="story-empty">No stats on file yet.</div>'}
+      <div style="text-align:right;margin-top:4px;"><button class="btn ghost" data-editstats="${c.id}" style="font-size:11px;padding:4px 10px;">correct stats</button></div>
+    </div>`;
+  }
+  const lock = (c.owner === 'son') ? ` <span title="Not for trade">🔒</span>` : '';
+
+  const thesisSection = `
+      <div class="story-label thesis">The ${esc(c.player)} thesis <span class="save-indicator" id="thesisSaved">saved</span></div>
+      <textarea class="canvas-input" id="thesisInput" data-autogrow="1" placeholder="Your read on ${esc(c.player)} — why collect him, what you're betting on...">${esc(c.thesis)}</textarea>`;
+  const storySection = `
+      <div class="story-label">This card's story <span class="save-indicator" id="storySaved">saved</span></div>
+      <textarea class="canvas-input" id="storyInput" data-autogrow="1" placeholder="How'd you get this one? Anything that makes it special?">${esc(c.story)}</textarea>`;
+
+  const dateLine = c.datePurchased ? `<div class="story-empty" style="margin-top:8px;">Acquired ${esc(c.datePurchased)}</div>` : '';
+
+  return `
+  <div class="spread-top"><button class="icon-btn" data-close="1" title="Close">✕</button></div>
+  <div class="spread-body">
+    <div class="photo-stage">
+      <div class="flip-card ${state.flipped ? 'flipped' : ''}" data-flip="1">
+        <div class="flip-inner">
+          <div class="flip-face front"><span class="tape-corner tl"></span><span class="tape-corner tr"></span>${frontFace}</div>
+          <div class="flip-face back">${backFace}</div>
+        </div>
+      </div>
+      <div class="flip-hint">tap card to flip · tap a blank side to add that photo</div>
+      <input type="file" id="frontFileInput" accept="image/*" style="display:none">
+      <input type="file" id="backFileInput" accept="image/*" style="display:none">
+    </div>
+    <div class="card-info">
+      <div class="owner-badge ${c.owner}">${ownerLabel(c.owner)}${lock}</div>
+      <h2 class="card-name">${esc(c.player)}</h2>
+      <div class="card-tags">${tags}</div>
+      ${statBlock}
+      ${thesisSection}
+      ${storySection}
+      ${dateLine}
+    </div>
+  </div>`;
+}
+
+function render(){
+  const app = document.getElementById('app');
+  if(!state.loaded){
+    app.innerHTML = `<div class="empty-note" style="color:var(--ink-soft);padding:60px 0;">opening the album…</div>`;
+    if(!document.getElementById('toastBanner')){ const t=document.createElement('div'); t.id='toastBanner'; document.body.appendChild(t); }
+    return;
+  }
+  const tagPills = ALL_TAGS.map(t=>`<button class="pill ${state.activeTags.has(t)?'active':''}" data-tag="${esc(t)}">${esc(t)}</button>`).join('');
+  const withPhoto = state.cards.filter(c=>c.frontImage).length;
+
+  app.innerHTML = `
+    <div class="header">
+      <div class="title-block"><h1>Passed Down</h1><div class="sub">a card album, kept by two collectors</div></div>
+    </div>
+    <div class="tabs">
+      <button class="tab ${state.tab==='all'?'active':''}" data-tab="all">All Cards</button>
+      <button class="tab ${state.tab==='dad'?'active':''}" data-tab="dad"><span class="dot"></span>Gideon's Collection</button>
+      <button class="tab ${state.tab==='son'?'active':''}" data-tab="son"><span class="dot"></span>Leo's Collection</button>
+    </div>
+    <div class="filters">
+      ${tagPills}
+      <div class="search-wrap"><input type="text" id="searchInput" placeholder="search a player or set…" value="${esc(state.search)}"></div>
+    </div>
+    ${renderCorkboard()}
+    <div class="footer-note">${state.cards.length} cards · ${withPhoto} with photos so far</div>
+    <div class="overlay ${state.openId ? 'show':''}" id="overlay">
+      <div class="spread">${state.openId ? renderSpread(state.cards.find(c=>c.id===state.openId) || {}) : ''}</div>
+    </div>
+  `;
+  if(!document.getElementById('toastBanner')){ const t=document.createElement('div'); t.id='toastBanner'; document.body.appendChild(t); }
+  bindEvents();
+}
+
+function renderBoardOnly(){
+  const board = document.querySelector('.corkboard');
+  if(board){ board.outerHTML = renderCorkboard(); rebindBoardEvents(); }
+}
+function rebindBoardEvents(){
+  document.querySelectorAll('[data-open]').forEach(el=>el.addEventListener('click', ()=>{
+    state.openId = el.getAttribute('data-open'); state.flipped = false; state.editingStatsFor = null; render();
+  }));
+}
+
+function bindEvents(){
+  const app = document.getElementById('app');
+  app.querySelectorAll('[data-tab]').forEach(el=>el.addEventListener('click', ()=>{ state.tab = el.getAttribute('data-tab'); render(); }));
+  app.querySelectorAll('[data-tag]').forEach(el=>el.addEventListener('click', ()=>{
+    const t = el.getAttribute('data-tag');
+    if(state.activeTags.has(t)) state.activeTags.delete(t); else state.activeTags.add(t);
+    render();
+  }));
+  const search = document.getElementById('searchInput');
+  if(search) search.addEventListener('input', ()=>{ state.search = search.value; renderBoardOnly(); });
+
+  app.querySelectorAll('[data-open]').forEach(el=>el.addEventListener('click', ()=>{
+    state.openId = el.getAttribute('data-open'); state.flipped = false; state.editingStatsFor = null; render();
+  }));
+  const closeBtn = app.querySelector('[data-close]');
+  if(closeBtn) closeBtn.addEventListener('click', ()=>{ state.openId=null; state.editingStatsFor=null; render(); });
+  const overlay = document.getElementById('overlay');
+  if(overlay) overlay.addEventListener('click', (e)=>{ if(e.target===overlay){ state.openId=null; state.editingStatsFor=null; render(); }});
+
+  const flipEl = app.querySelector('[data-flip]');
+  if(flipEl) flipEl.addEventListener('click', (e)=>{
+    if(e.target.closest('[data-addphoto]')) return;
+    state.flipped = !state.flipped; render();
+  });
+
+  app.querySelectorAll('[data-addphoto]').forEach(el=>el.addEventListener('click', (e)=>{
+    e.stopPropagation();
+    const which = el.getAttribute('data-addphoto');
+    const input = document.getElementById(which === 'front' ? 'frontFileInput' : 'backFileInput');
+    if(input) input.click();
+  }));
+  ['frontFileInput','backFileInput'].forEach(id=>{
+    const input = document.getElementById(id);
+    if(!input) return;
+    input.addEventListener('change', async ()=>{
+      if(!input.files[0]) return;
+      const which = id === 'frontFileInput' ? 'front' : 'back';
+      const dataUrl = await fileToCompressedDataUrl(input.files[0]);
+      PHOTOS[state.openId] = PHOTOS[state.openId] || {};
+      PHOTOS[state.openId][which] = dataUrl;
+      const c = state.cards.find(c=>c.id===state.openId);
+      if(c){ if(which==='front') c.frontImage = dataUrl; else c.backImage = dataUrl; }
+      render();
+      const ok = await storeSetWithRetry('photos', JSON.stringify(PHOTOS), true);
+      if(!ok) showBanner("Photo saved on this device, but had trouble syncing — try again in a moment.");
+    });
+  });
+
+  // canvas-style inline editors: autosize + debounced autosave, no dialogs
+  function wireCanvasInput(id, indicatorId, getKeyAndSave){
+    const ta = document.getElementById(id);
+    if(!ta) return;
+    const autosize = ()=>{ ta.style.height = 'auto'; ta.style.height = (ta.scrollHeight + 2) + 'px'; };
+    autosize();
+    let timer = null;
+    const flush = async ()=>{
+      const ok = await getKeyAndSave(ta.value);
+      const ind = document.getElementById(indicatorId);
+      if(ind){
+        if(ok){ ind.classList.add('show'); clearTimeout(ind._t); ind._t = setTimeout(()=>ind.classList.remove('show'), 1200); }
+        else showBanner("Couldn't sync — try again in a moment.");
+      }
+    };
+    ta.addEventListener('input', ()=>{
+      autosize();
+      clearTimeout(timer);
+      timer = setTimeout(flush, 900);
+    });
+    ta.addEventListener('blur', ()=>{ clearTimeout(timer); flush(); });
+  }
+  wireCanvasInput('thesisInput', 'thesisSaved', async (val)=>{
+    const c = state.cards.find(c=>c.id===state.openId);
+    if(!c) return false;
+    THESES[c.player] = val;
+    state.cards.forEach(cc=>{ if(cc.player === c.player) cc.thesis = val; });
+    return await storeSetWithRetry('theses', JSON.stringify(THESES), true);
+  });
+  wireCanvasInput('storyInput', 'storySaved', async (val)=>{
+    if(!state.openId) return false;
+    STORIES[state.openId] = val;
+    const c = state.cards.find(c=>c.id===state.openId);
+    if(c) c.story = val;
+    return await storeSetWithRetry('stories', JSON.stringify(STORIES), true);
+  });
+
+  // correct-stats: password-gated, remembered per device, autosaves like the canvas fields
+  const editStatsBtn = app.querySelector('[data-editstats]');
+  if(editStatsBtn) editStatsBtn.addEventListener('click', async ()=>{
+    const cardId = editStatsBtn.getAttribute('data-editstats');
+    const already = await storeGet('edit_unlocked', false);
+    if(already === 'yes'){
+      state.editingStatsFor = cardId; render(); return;
+    }
+    const pw = prompt("Enter the stats-editing password:");
+    if(pw === EDIT_PASSWORD){
+      await storeSetWithRetry('edit_unlocked', 'yes', false);
+      state.editingStatsFor = cardId; render();
+    } else if(pw !== null){
+      showBanner("Wrong password.");
+    }
+  });
+  const statsDoneBtn = app.querySelector('[data-stats-done]');
+  if(statsDoneBtn) statsDoneBtn.addEventListener('click', ()=>{ state.editingStatsFor = null; render(); });
+
+  app.querySelectorAll('.stat-edit-input').forEach(input=>{
+    let timer = null;
+    const flush = async ()=>{
+      const c = state.cards.find(c=>c.id===state.openId);
+      if(!c) return;
+      OVERRIDES[c.id] = OVERRIDES[c.id] || {};
+      app.querySelectorAll('.stat-edit-input').forEach(inp=>{
+        const key = inp.getAttribute('data-statfield');
+        OVERRIDES[c.id][key] = inp.value;
+        c[key] = inp.value;
+      });
+      const ok = await storeSetWithRetry('overrides', JSON.stringify(OVERRIDES), true);
+      if(!ok) showBanner("Couldn't sync the correction — try again in a moment.");
+    };
+    input.addEventListener('input', ()=>{ clearTimeout(timer); timer = setTimeout(flush, 900); });
+    input.addEventListener('blur', ()=>{ clearTimeout(timer); flush(); });
+  });
+}
+
+init();
+})();
+</script>
+</body>
+</html>
