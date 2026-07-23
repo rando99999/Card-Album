@@ -633,7 +633,7 @@ function bindEvents(){
   function wireZoom(imgEl){
     if(!imgEl) return;
     let scale = 1, startScale = 1, panX = 0, panY = 0, startPanX = 0, startPanY = 0, pinchStartDist = 0, lastTapTime = 0;
-    imgEl.style.transformOrigin = '0 0';
+    imgEl.style.transformOrigin = 'center center';
     imgEl.style.touchAction = 'none';
     imgEl.style.transition = 'transform .1s ease-out';
     function apply(){ imgEl.style.transform = `translate(${panX}px, ${panY}px) scale(${scale})`; }
