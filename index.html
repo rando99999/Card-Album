@@ -95,6 +95,12 @@ input,textarea{font-family:inherit;}
 .lightbox img{max-width:100%;max-height:100%;object-fit:contain;border-radius:6px;cursor:pointer;}
 .lightbox-close{position:fixed;top:calc(env(safe-area-inset-top,0px) + 14px);right:14px;z-index:201;width:42px;height:42px;border-radius:50%;background:rgba(247,239,220,0.15);color:#F7EFDC;border:none;font-size:19px;display:flex;align-items:center;justify-content:center;}
 .lightbox-hint{position:fixed;bottom:calc(env(safe-area-inset-bottom,0px) + 16px);left:0;right:0;text-align:center;font-family:var(--font-mono);font-size:10.5px;color:rgba(247,239,220,0.7);letter-spacing:.03em;text-transform:uppercase;}
+.album-fullscreen{position:fixed;inset:0;background:#000;z-index:150;overflow:hidden;}
+.album-photo{position:absolute;inset:0;display:flex;align-items:center;justify-content:center;background:#000;}
+.album-flip-btn{position:fixed;top:calc(env(safe-area-inset-top,0px) + 14px);left:14px;z-index:151;background:rgba(247,239,220,0.15);color:#F7EFDC;border:none;border-radius:999px;padding:8px 14px;font-family:var(--font-mono);font-size:12px;}
+.album-hint{position:fixed;bottom:calc(env(safe-area-inset-bottom,0px) + 14px);left:0;right:0;text-align:center;font-family:var(--font-mono);font-size:10px;color:rgba(247,239,220,0.65);letter-spacing:.03em;text-transform:uppercase;pointer-events:none;}
+.album-info{position:absolute;left:0;right:0;bottom:0;max-height:70%;overflow-y:auto;background:var(--paper-light);border-radius:18px 18px 0 0;padding:18px 20px calc(env(safe-area-inset-bottom,0px) + 24px);transform:translateY(100%);transition:transform .3s ease;box-shadow:0 -6px 30px rgba(0,0,0,.5);}
+.album-info.show{transform:translateY(0);}
 .flip-hint{text-align:center;font-family:var(--font-mono);font-size:10.5px;color:var(--ink-soft);margin-top:10px;letter-spacing:.03em;text-transform:uppercase;}
 .card-info{flex:1;padding:18px 0 8px;min-width:0;}
 .owner-badge{display:inline-flex;align-items:center;gap:5px;font-family:var(--font-mono);font-size:11px;padding:3px 10px;border-radius:999px;margin-bottom:8px;letter-spacing:.02em;}
@@ -219,7 +225,8 @@ function fileToCompressedDataUrl(file){
 /* ===================== state ===================== */
 const state = {
   cards: [], loaded: false, tab: "all", activeTags: new Set(), search: "",
-  openId: null, flipped: false, editingStatsFor: null, lightbox: false
+  openId: null, flipped: false, editingStatsFor: null, lightbox: false,
+  albumMode: false, albumInfoShown: false
 };
 let STORIES = {};
 let THESES = {};
@@ -278,6 +285,8 @@ async function boot(){
     const ov = OVERRIDES[c.id];
     if(ov){ STAT_KEYS.forEach(k=>{ if(ov[k] !== undefined) c[k] = ov[k]; }); }
   });
+  const albumModeRaw = await storeGet('album_mode', false);
+  state.albumMode = albumModeRaw === 'yes';
   state.cards = cards;
   state.loaded = true;
   render();
@@ -285,6 +294,7 @@ async function boot(){
 
 /* ===================== derived ===================== */
 const ALL_TAGS = ["Legends","Prospects","Rising Stars","Other"];
+const STAT_FIELDS = [['set','Brand'],['year','Year'],['variant','Parallel'],['cardNumber','Card #'],['grade','Grade']];
 function ownerLabel(o){ return o === 'dad' ? "Gideon's Collection" : "Leo's Collection"; }
 function filteredCards(){
   return state.cards.filter(c=>{
@@ -321,7 +331,6 @@ function renderSpread(c){
   const frontFace = c.frontImage ? `${frontPh}<img src="${c.frontImage}" alt="front" style="position:absolute;inset:0;width:100%;height:100%;object-fit:cover;" onerror="this.remove()"><button class="photo-fix-btn" data-addphoto="front" title="Replace this photo">✎</button>` : frontPh;
   const backFace = c.backImage ? `${backPh}<img src="${c.backImage}" alt="back" style="position:absolute;inset:0;width:100%;height:100%;object-fit:cover;" onerror="this.remove()"><button class="photo-fix-btn" data-addphoto="back" title="Replace this photo">✎</button>` : backPh;
   const tags = (c.tags||[]).map(t=>`<span class="tag-chip ${slug(t)}">${esc(t)}</span>`).join('');
-  const STAT_FIELDS = [['set','Brand'],['year','Year'],['variant','Parallel'],['cardNumber','Card #'],['grade','Grade']];
   let statBlock;
   if(state.editingStatsFor === c.id){
     statBlock = `<div class="stat-block" id="statEditBlock">
@@ -388,6 +397,7 @@ function render(){
   app.innerHTML = `
     <div class="header">
       <div class="title-block"><h1>Passed Down</h1><div class="sub">a card album, kept by two collectors</div></div>
+      <div class="ledger-toggle" data-albummodetoggle="1"><span>album mode</span><div class="switch ${state.albumMode?'on':''}"></div></div>
     </div>
     <div class="tabs">
       <button class="tab ${state.tab==='all'?'active':''}" data-tab="all">All Cards</button>
@@ -400,11 +410,12 @@ function render(){
     </div>
     ${renderCorkboard()}
     <div class="footer-note">${state.cards.length} cards · ${withPhoto} with photos so far</div>
+    ${state.openId && state.albumMode ? renderAlbumFullscreen() : `
     <div class="overlay ${state.openId ? 'show':''}" id="overlay">
       ${state.openId ? '<button class="close-fab" data-close="1">✕</button>' : ''}
       <div class="spread">${state.openId ? renderSpread(state.cards.find(c=>c.id===state.openId) || {}) : ''}</div>
     </div>
-    ${renderLightbox()}
+    ${renderLightbox()}`}
   `;
   if(!document.getElementById('toastBanner')){ const t=document.createElement('div'); t.id='toastBanner'; document.body.appendChild(t); }
   bindEvents();
@@ -421,6 +432,32 @@ function renderLightbox(){
     <button class="lightbox-close" data-lightbox-close="1">✕</button>
     <img src="${img}" alt="${state.flipped ? 'back' : 'front'}" data-lightbox-flip="1">
     <div class="lightbox-hint">tap photo to flip</div>
+  </div>`;
+}
+
+function renderAlbumFullscreen(){
+  const c = state.cards.find(c=>c.id===state.openId);
+  if(!c) return '';
+  const img = state.flipped ? c.backImage : c.frontImage;
+  const photoHtml = img
+    ? `<img src="${img}" alt="${state.flipped?'back':'front'}" style="width:100%;height:100%;object-fit:contain;">`
+    : `<div class="placeholder-ph" style="font-size:40px;">${esc(initials(c.player))}</div>`;
+  const statRows = STAT_FIELDS.filter(([key])=>c[key]).map(([key,label])=>`<div class="stat-row"><span class="k">${label}</span><span class="v">${esc(c[key])}</span></div>`).join('');
+  const tags = (c.tags||[]).map(t=>`<span class="tag-chip ${slug(t)}">${esc(t)}</span>`).join('');
+  return `
+  <div class="album-fullscreen" id="albumFullscreen">
+    <button class="close-fab" data-close="1">✕</button>
+    <button class="album-flip-btn" data-album-flip="1">⟲ flip</button>
+    <div class="album-photo" data-album-tap="1">${photoHtml}</div>
+    <div class="album-info ${state.albumInfoShown ? 'show' : ''}">
+      <div class="owner-badge ${c.owner}">${ownerLabel(c.owner)}</div>
+      <h2 class="card-name">${esc(c.player)}</h2>
+      <div class="card-tags">${tags}</div>
+      <div class="stat-block">${statRows || '<div class="story-empty">No stats on file yet.</div>'}</div>
+      ${c.thesis ? `<div class="story-label thesis">The ${esc(c.player)} thesis</div><div class="story-text">${esc(c.thesis)}</div>` : ''}
+      ${c.story ? `<div class="story-label">This card's story</div><div class="story-text">${esc(c.story)}</div>` : ''}
+    </div>
+    <div class="album-hint">tap photo for details · swipe for next card</div>
   </div>`;
 }
 
@@ -448,7 +485,7 @@ function bindEvents(){
   app.querySelectorAll('[data-open]').forEach(el=>el.addEventListener('click', ()=>{
     state.openId = el.getAttribute('data-open'); state.flipped = false; state.editingStatsFor = null; state.lightbox = false; render();
   }));
-  app.querySelectorAll('[data-close]').forEach(el=>el.addEventListener('click', ()=>{ state.openId=null; state.editingStatsFor=null; state.lightbox=false; render(); }));
+  app.querySelectorAll('[data-close]').forEach(el=>el.addEventListener('click', ()=>{ state.openId=null; state.editingStatsFor=null; state.lightbox=false; state.albumInfoShown=false; render(); }));
   const overlay = document.getElementById('overlay');
   if(overlay) overlay.addEventListener('click', (e)=>{ if(e.target===overlay){ state.openId=null; state.editingStatsFor=null; state.lightbox=false; render(); }});
 
@@ -565,6 +602,51 @@ function bindEvents(){
     input.addEventListener('input', ()=>{ clearTimeout(timer); timer = setTimeout(flush, 900); });
     input.addEventListener('blur', ()=>{ clearTimeout(timer); flush(); });
   });
+
+  // album mode toggle (persisted per device)
+  const albumToggle = app.querySelector('[data-albummodetoggle]');
+  if(albumToggle) albumToggle.addEventListener('click', async ()=>{
+    state.albumMode = !state.albumMode;
+    await storeSetWithRetry('album_mode', state.albumMode ? 'yes' : 'no', false);
+    render();
+  });
+
+  // album mode: tap photo to reveal/hide info, separate button to flip
+  const albumTapEl = app.querySelector('[data-album-tap]');
+  if(albumTapEl) albumTapEl.addEventListener('click', ()=>{ state.albumInfoShown = !state.albumInfoShown; render(); });
+  const albumFlipBtn = app.querySelector('[data-album-flip]');
+  if(albumFlipBtn) albumFlipBtn.addEventListener('click', (e)=>{ e.stopPropagation(); state.flipped = !state.flipped; render(); });
+
+  // swipe left/right to move to the next/previous card, in either view
+  function navigateCard(dir){
+    const list = filteredCards();
+    const idx = list.findIndex(c=>c.id===state.openId);
+    if(idx === -1) return;
+    const newIdx = idx + dir;
+    if(newIdx < 0 || newIdx >= list.length) return;
+    state.openId = list[newIdx].id;
+    state.flipped = false; state.editingStatsFor = null; state.lightbox = false; state.albumInfoShown = false;
+    render();
+  }
+  function wireSwipe(el){
+    if(!el) return;
+    let sx = null, sy = null;
+    el.addEventListener('touchstart', (e)=>{
+      if(e.touches.length !== 1) return;
+      sx = e.touches[0].clientX; sy = e.touches[0].clientY;
+    }, {passive:true});
+    el.addEventListener('touchend', (e)=>{
+      if(sx === null) return;
+      const dx = e.changedTouches[0].clientX - sx;
+      const dy = e.changedTouches[0].clientY - sy;
+      sx = null; sy = null;
+      if(Math.abs(dx) > 60 && Math.abs(dx) > Math.abs(dy) * 1.5){
+        navigateCard(dx < 0 ? 1 : -1);
+      }
+    }, {passive:true});
+  }
+  wireSwipe(document.querySelector('.spread'));
+  wireSwipe(document.getElementById('albumFullscreen'));
 }
 
 init();
