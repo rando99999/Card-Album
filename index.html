@@ -258,7 +258,7 @@ function renderGate(msg){
   const app = document.getElementById('app');
   app.innerHTML = `
     <div style="max-width:340px;margin:70px auto;padding:26px 22px;background:var(--paper-light);border-radius:14px;box-shadow:0 6px 20px var(--shadow);text-align:center;">
-      <div style="font-family:var(--font-display);font-weight:700;font-size:26px;">Passed Down</div>
+      <div style="font-family:var(--font-display);font-weight:700;font-size:26px;">Album</div>
       <div style="font-family:var(--font-hand);font-size:18px;color:var(--ink-soft);margin:2px 0 18px;">enter the password to open the album</div>
       <input type="password" id="gatePw" style="width:100%;padding:10px 12px;border-radius:8px;border:1px solid var(--paper-deep);font-family:var(--font-mono);font-size:15px;margin-bottom:10px;box-sizing:border-box;" placeholder="password" autocomplete="off">
       ${msg ? `<div style="color:#8c3a2a;font-family:var(--font-mono);font-size:12px;margin-bottom:10px;">${esc(msg)}</div>` : ''}
@@ -307,13 +307,19 @@ async function boot(){
 }
 
 /* ===================== derived ===================== */
-const ALL_TAGS = ["Legends","Prospects","Rising Stars","Other"];
+const ALL_TAGS = ["Kobe","Luka","Reaves","Kessler","Harper","Magic","Thiero","Wemby","Flagg","Other"];
+const PLAYER_FILTER_MATCH = {Kobe:"Kobe", Luka:"Luka", Reaves:"Reaves", Kessler:"Kessler", Harper:"Harper", Magic:"Magic", Thiero:"Thiero", Wemby:"Wembanyama", Flagg:"Flagg"};
+function cardMatchesFilter(c, label){
+  if(label === 'Other') return !Object.values(PLAYER_FILTER_MATCH).some(m=>c.player.includes(m));
+  const m = PLAYER_FILTER_MATCH[label];
+  return m ? c.player.includes(m) : false;
+}
 const STAT_FIELDS = [['set','Brand'],['year','Year'],['variant','Parallel'],['cardNumber','Card #'],['grade','Grade']];
-function ownerLabel(o){ return o === 'dad' ? "Gideon's Collection" : "Leo's Collection"; }
+function ownerLabel(o){ return o === 'dad' ? "Dad" : "Leo"; }
 function filteredCards(){
   return state.cards.filter(c=>{
     if(state.tab !== 'all' && c.owner !== state.tab) return false;
-    if(state.activeTags.size > 0 && !(c.tags||[]).some(t=>state.activeTags.has(t))) return false;
+    if(state.activeTags.size > 0 && ![...state.activeTags].some(t=>cardMatchesFilter(c, t))) return false;
     if(state.search.trim()){
       const q = state.search.trim().toLowerCase();
       if(!c.player.toLowerCase().includes(q) && !(c.set||'').toLowerCase().includes(q)) return false;
@@ -410,13 +416,13 @@ function render(){
 
   app.innerHTML = `
     <div class="header">
-      <div class="title-block"><h1>Passed Down</h1><div class="sub">a card album, kept by two collectors</div></div>
+      <div class="title-block"><h1>Album</h1><div class="sub">a card album, kept by two collectors</div></div>
       <div class="ledger-toggle" data-albummodetoggle="1"><span>album mode</span><div class="switch ${state.albumMode?'on':''}"></div></div>
     </div>
     <div class="tabs">
-      <button class="tab ${state.tab==='all'?'active':''}" data-tab="all">All Cards</button>
-      <button class="tab ${state.tab==='dad'?'active':''}" data-tab="dad"><span class="dot"></span>Gideon's Collection</button>
-      <button class="tab ${state.tab==='son'?'active':''}" data-tab="son"><span class="dot"></span>Leo's Collection</button>
+      <button class="tab ${state.tab==='all'?'active':''}" data-tab="all">All</button>
+      <button class="tab ${state.tab==='dad'?'active':''}" data-tab="dad"><span class="dot"></span>Dad</button>
+      <button class="tab ${state.tab==='son'?'active':''}" data-tab="son"><span class="dot"></span>Leo</button>
     </div>
     <div class="filters">
       ${tagPills}
