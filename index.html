@@ -90,6 +90,11 @@ input,textarea{font-family:inherit;}
 .tape-corner{position:absolute;width:34px;height:16px;background:var(--tape);opacity:.85;box-shadow:0 1px 2px rgba(0,0,0,.15);}
 .tape-corner.tl{top:-8px;left:14px;transform:rotate(-8deg);}
 .tape-corner.tr{top:-8px;right:14px;transform:rotate(7deg);}
+.photo-fix-btn{position:absolute;bottom:6px;right:6px;z-index:2;width:26px;height:26px;border-radius:50%;background:rgba(43,36,32,0.72);color:#F7EFDC;border:none;font-size:12px;display:flex;align-items:center;justify-content:center;}
+.lightbox{position:fixed;inset:0;background:rgba(10,8,6,0.94);z-index:200;display:flex;align-items:center;justify-content:center;padding:env(safe-area-inset-top,20px) 16px env(safe-area-inset-bottom,20px);}
+.lightbox img{max-width:100%;max-height:100%;object-fit:contain;border-radius:6px;cursor:pointer;}
+.lightbox-close{position:fixed;top:calc(env(safe-area-inset-top,0px) + 14px);right:14px;z-index:201;width:42px;height:42px;border-radius:50%;background:rgba(247,239,220,0.15);color:#F7EFDC;border:none;font-size:19px;display:flex;align-items:center;justify-content:center;}
+.lightbox-hint{position:fixed;bottom:calc(env(safe-area-inset-bottom,0px) + 16px);left:0;right:0;text-align:center;font-family:var(--font-mono);font-size:10.5px;color:rgba(247,239,220,0.7);letter-spacing:.03em;text-transform:uppercase;}
 .flip-hint{text-align:center;font-family:var(--font-mono);font-size:10.5px;color:var(--ink-soft);margin-top:10px;letter-spacing:.03em;text-transform:uppercase;}
 .card-info{flex:1;padding:18px 0 8px;min-width:0;}
 .owner-badge{display:inline-flex;align-items:center;gap:5px;font-family:var(--font-mono);font-size:11px;padding:3px 10px;border-radius:999px;margin-bottom:8px;letter-spacing:.02em;}
@@ -105,7 +110,7 @@ input,textarea{font-family:inherit;}
 .stat-block{border-top:1px solid var(--paper-deep);border-bottom:1px solid var(--paper-deep);padding:10px 0;margin-bottom:16px;}
 .stat-row{display:flex;justify-content:space-between;gap:10px;font-family:var(--font-mono);font-size:12.5px;padding:3px 0;color:var(--ink);}
 .stat-row .k{color:var(--ink-soft);flex-shrink:0;}
-.stat-row .v{text-align:right;}
+.stat-row .v{text-align:right;flex:1;min-width:0;word-break:break-word;}
 .stat-edit-input{border:none;border-bottom:1px dashed var(--paper-deep);background:transparent;font-family:var(--font-mono);font-size:12.5px;color:var(--ink);text-align:right;width:60%;padding:1px 2px;}
 .stat-edit-input:focus{border-bottom:1px dashed var(--purple);}
 .story-label{font-family:var(--font-hand);font-size:19px;color:var(--rust);margin:14px 0 2px;display:flex;align-items:center;gap:8px;}
@@ -214,7 +219,7 @@ function fileToCompressedDataUrl(file){
 /* ===================== state ===================== */
 const state = {
   cards: [], loaded: false, tab: "all", activeTags: new Set(), search: "",
-  openId: null, flipped: false, editingStatsFor: null
+  openId: null, flipped: false, editingStatsFor: null, lightbox: false
 };
 let STORIES = {};
 let THESES = {};
@@ -313,8 +318,8 @@ function renderCorkboard(){
 function renderSpread(c){
   const frontPh = `<div class="placeholder-ph" data-addphoto="front" style="cursor:pointer;">${esc(initials(c.player))}<br><span style="font-family:var(--font-mono);font-size:10px;color:#a8967a;">tap to add front</span></div>`;
   const backPh = `<div class="placeholder-ph" data-addphoto="back" style="font-size:13px;color:#a8967a;cursor:pointer;">tap to add back photo</div>`;
-  const frontFace = c.frontImage ? `${frontPh}<img src="${c.frontImage}" alt="front" style="position:absolute;inset:0;width:100%;height:100%;object-fit:cover;" onerror="this.remove()">` : frontPh;
-  const backFace = c.backImage ? `${backPh}<img src="${c.backImage}" alt="back" style="position:absolute;inset:0;width:100%;height:100%;object-fit:cover;" onerror="this.remove()">` : backPh;
+  const frontFace = c.frontImage ? `${frontPh}<img src="${c.frontImage}" alt="front" style="position:absolute;inset:0;width:100%;height:100%;object-fit:cover;" onerror="this.remove()"><button class="photo-fix-btn" data-addphoto="front" title="Replace this photo">✎</button>` : frontPh;
+  const backFace = c.backImage ? `${backPh}<img src="${c.backImage}" alt="back" style="position:absolute;inset:0;width:100%;height:100%;object-fit:cover;" onerror="this.remove()"><button class="photo-fix-btn" data-addphoto="back" title="Replace this photo">✎</button>` : backPh;
   const tags = (c.tags||[]).map(t=>`<span class="tag-chip ${slug(t)}">${esc(t)}</span>`).join('');
   const STAT_FIELDS = [['set','Brand'],['year','Year'],['variant','Parallel'],['cardNumber','Card #'],['grade','Grade']];
   let statBlock;
@@ -345,7 +350,7 @@ function renderSpread(c){
   const dateLine = c.datePurchased ? `<div class="story-empty" style="margin-top:8px;">Acquired ${esc(c.datePurchased)}</div>` : '';
 
   return `
-  <div class="spread-top"><button class="icon-btn" data-close="1" title="Close">✕</button></div>
+  <div class="spread-top"></div>
   <div class="spread-body">
     <div class="photo-stage">
       <div class="flip-card ${state.flipped ? 'flipped' : ''}" data-flip="1">
@@ -354,7 +359,7 @@ function renderSpread(c){
           <div class="flip-face back">${backFace}</div>
         </div>
       </div>
-      <div class="flip-hint">tap card to flip · tap a blank side to add that photo</div>
+      <div class="flip-hint">tap photo to view full screen</div>
       <input type="file" id="frontFileInput" accept="image/*" style="display:none">
       <input type="file" id="backFileInput" accept="image/*" style="display:none">
     </div>
@@ -399,9 +404,24 @@ function render(){
       ${state.openId ? '<button class="close-fab" data-close="1">✕</button>' : ''}
       <div class="spread">${state.openId ? renderSpread(state.cards.find(c=>c.id===state.openId) || {}) : ''}</div>
     </div>
+    ${renderLightbox()}
   `;
   if(!document.getElementById('toastBanner')){ const t=document.createElement('div'); t.id='toastBanner'; document.body.appendChild(t); }
   bindEvents();
+}
+
+function renderLightbox(){
+  if(!state.lightbox || !state.openId) return '';
+  const c = state.cards.find(c=>c.id===state.openId);
+  if(!c) return '';
+  const img = state.flipped ? c.backImage : c.frontImage;
+  if(!img) return '';
+  return `
+  <div class="lightbox" id="lightboxOverlay">
+    <button class="lightbox-close" data-lightbox-close="1">✕</button>
+    <img src="${img}" alt="${state.flipped ? 'back' : 'front'}" data-lightbox-flip="1">
+    <div class="lightbox-hint">tap photo to flip</div>
+  </div>`;
 }
 
 function renderBoardOnly(){
@@ -410,7 +430,7 @@ function renderBoardOnly(){
 }
 function rebindBoardEvents(){
   document.querySelectorAll('[data-open]').forEach(el=>el.addEventListener('click', ()=>{
-    state.openId = el.getAttribute('data-open'); state.flipped = false; state.editingStatsFor = null; render();
+    state.openId = el.getAttribute('data-open'); state.flipped = false; state.editingStatsFor = null; state.lightbox = false; render();
   }));
 }
 
@@ -426,17 +446,28 @@ function bindEvents(){
   if(search) search.addEventListener('input', ()=>{ state.search = search.value; renderBoardOnly(); });
 
   app.querySelectorAll('[data-open]').forEach(el=>el.addEventListener('click', ()=>{
-    state.openId = el.getAttribute('data-open'); state.flipped = false; state.editingStatsFor = null; render();
+    state.openId = el.getAttribute('data-open'); state.flipped = false; state.editingStatsFor = null; state.lightbox = false; render();
   }));
-  app.querySelectorAll('[data-close]').forEach(el=>el.addEventListener('click', ()=>{ state.openId=null; state.editingStatsFor=null; render(); }));
+  app.querySelectorAll('[data-close]').forEach(el=>el.addEventListener('click', ()=>{ state.openId=null; state.editingStatsFor=null; state.lightbox=false; render(); }));
   const overlay = document.getElementById('overlay');
-  if(overlay) overlay.addEventListener('click', (e)=>{ if(e.target===overlay){ state.openId=null; state.editingStatsFor=null; render(); }});
+  if(overlay) overlay.addEventListener('click', (e)=>{ if(e.target===overlay){ state.openId=null; state.editingStatsFor=null; state.lightbox=false; render(); }});
 
   const flipEl = app.querySelector('[data-flip]');
   if(flipEl) flipEl.addEventListener('click', (e)=>{
     if(e.target.closest('[data-addphoto]')) return;
-    state.flipped = !state.flipped; render();
+    const c = state.cards.find(c=>c.id===state.openId);
+    const hasImg = c && (state.flipped ? c.backImage : c.frontImage);
+    if(hasImg){ state.lightbox = true; render(); }
   });
+  const lightboxEl = document.getElementById('lightboxOverlay');
+  if(lightboxEl){
+    lightboxEl.addEventListener('click', (e)=>{
+      if(e.target.closest('[data-lightbox-flip]')){ state.flipped = !state.flipped; render(); return; }
+      if(e.target === lightboxEl){ state.lightbox = false; render(); }
+    });
+  }
+  const lightboxCloseBtn = document.querySelector('[data-lightbox-close]');
+  if(lightboxCloseBtn) lightboxCloseBtn.addEventListener('click', ()=>{ state.lightbox = false; render(); });
 
   app.querySelectorAll('[data-addphoto]').forEach(el=>el.addEventListener('click', (e)=>{
     e.stopPropagation();
